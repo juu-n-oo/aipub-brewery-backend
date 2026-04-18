@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: aipub-brewery-backend
+  ai:
+    mcp:
+      server:
+        name: aipub-brewery
+        version: 1.0.0
+        type: SYNC
+        sse-message-endpoint: /mcp/messages
+  datasource:
+    url: jdbc:h2:mem:brewery
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+server:
+  port: 8080
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui
+
+brewery:
+  kubernetes:
+    verify-ssl: false
+    kube-config:
+      mode: FILE
+      kube-config-path: ${HOME}/.kube/config
+  dockerfile:
+    forbidden-instructions:
+      - ADD
+  volume:
+    client-mode: K8S  # K8S: Kubernetes API 직접 사용, PROXY: AIPub k8s proxy 경유
+    proxy-base-url: https://aipub.cluster7.idc1.ten1010.io
+  registry:
+    ngc:
+      enabled: true
+      catalog-url: https://api.ngc.nvidia.com/v2
+      registry-url: https://nvcr.io
+      api-key: ${NGC_API_KEY:}
+    huggingface:
+      enabled: true
+      docker-hub-url: https://hub.docker.com/v2
+      namespace: huggingface

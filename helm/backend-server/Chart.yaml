@@ -1,0 +1,6 @@
+apiVersion: v2
+name: backend-server
+description: AIPub Brewery Backend Server - REST API for Dockerfile management and ImageBuild CR creation
+type: application
+version: 0.1.0
+appVersion: "0.0.1-SNAPSHOT"

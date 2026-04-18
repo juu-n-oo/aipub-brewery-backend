@@ -1,0 +1,89 @@
+replicaCount: 1
+
+image:
+  repository: ""  # Required: e.g. harbor.example.com/brewery/backend-server
+  tag: ""         # Defaults to Chart.appVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: brewery.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Spring Boot application configuration
+config:
+  # Database
+  datasource:
+    url: ""       # Required: e.g. jdbc:postgresql://postgres:5432/brewery
+    username: ""
+    password: ""
+    driverClassName: org.postgresql.Driver
+  jpa:
+    ddlAuto: validate
+    showSql: false
+  # Brewery-specific
+  brewery:
+    kubernetes:
+      verifySsl: true
+      kubeConfig:
+        mode: IN_CLUSTER
+    dockerfile:
+      forbiddenInstructions:
+        - ADD
+    volume:
+      clientMode: K8S
+      proxyBaseUrl: ""
+    registry:
+      ngc:
+        enabled: false
+        catalogUrl: https://api.ngc.nvidia.com/v2
+        registryUrl: https://nvcr.io
+        apiKey: ""
+      huggingface:
+        enabled: false
+        dockerHubUrl: https://hub.docker.com/v2
+        namespace: huggingface
+
+# Existing secret containing datasource credentials (optional)
+# If set, datasource.username/password in config are ignored
+existingSecret: ""
+# Keys in the existing secret
+existingSecretKeys:
+  datasourceUrl: spring.datasource.url
+  datasourceUsername: spring.datasource.username
+  datasourcePassword: spring.datasource.password
+
+# NGC API Key from existing secret (optional)
+ngcApiKeySecret: ""
+ngcApiKeySecretKey: api-key

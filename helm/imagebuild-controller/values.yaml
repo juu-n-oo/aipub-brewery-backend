@@ -1,0 +1,40 @@
+replicaCount: 1
+
+image:
+  repository: ""  # Required: e.g. harbor.example.com/brewery/imagebuild-controller
+  tag: ""         # Defaults to Chart.appVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Install CRD with chart
+installCrd: true
+
+# Application configuration
+config:
+  brewery:
+    kubernetes:
+      verifySsl: true
+      kubeConfig:
+        mode: IN_CLUSTER
+    imagebuild:
+      kanikoImage: gcr.io/kaniko-project/executor:latest

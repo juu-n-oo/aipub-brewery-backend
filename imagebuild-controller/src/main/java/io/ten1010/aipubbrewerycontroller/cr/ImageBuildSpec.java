@@ -1,0 +1,16 @@
+package io.ten1010.aipubbrewerycontroller.cr;
+
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ImageBuildSpec {
+
+    private String dockerfileContent;
+    private String targetImage;
+    private String pushSecretRef;
+
+}

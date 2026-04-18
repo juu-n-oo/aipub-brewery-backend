@@ -1,0 +1,6 @@
+apiVersion: v2
+name: imagebuild-controller
+description: AIPub Brewery ImageBuild Controller - K8s Operator that watches ImageBuild CRs and manages Kaniko Jobs
+type: application
+version: 0.1.0
+appVersion: "0.0.1-SNAPSHOT"

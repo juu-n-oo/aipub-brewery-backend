@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: aipub-brewery-controller
+
+brewery:
+  kubernetes:
+    verify-ssl: false
+    kube-config:
+      mode: FILE
+      kube-config-path: ${HOME}/.kube/config
+  imagebuild:
+    kaniko-image: gcr.io/kaniko-project/executor:latest

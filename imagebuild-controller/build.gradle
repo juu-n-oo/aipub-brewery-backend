@@ -1,0 +1,15 @@
+plugins {
+    id 'org.springframework.boot'
+}
+
+description = 'AIPub Brewery ImageBuild Controller - K8s Operator that watches ImageBuild CRs and manages Kaniko Jobs'
+
+dependencies {
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter'
+
+    // Kubernetes Client (official)
+    implementation 'io.kubernetes:client-java:24.0.0'
+    implementation 'io.kubernetes:client-java-spring-integration:24.0.0'
+    implementation 'io.kubernetes:client-java-extended:24.0.0'
+}

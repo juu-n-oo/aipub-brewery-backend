@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "backend-server.fullname" . }}
+  labels:
+    {{- include "backend-server.labels" . | nindent 4 }}
+rules:
+  # ImageBuild CR operations
+  - apiGroups: ["brewery.aipub.ten1010.io"]
+    resources: ["imagebuilds"]
+    verbs: ["get", "list", "create"]
+  # Pod log access (Kaniko build logs)
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  # Pod exec (Volume file browsing via AIPubVolume busybox Pod)
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  # AIPubVolume CR read (Volume browsing)
+  - apiGroups: ["aipub.ten1010.io"]
+    resources: ["aipubvolumes"]
+    verbs: ["get", "list"]

@@ -1,0 +1,4 @@
+rootProject.name = 'aipub-brewery-backend'
+
+include 'backend-server'
+include 'imagebuild-controller'

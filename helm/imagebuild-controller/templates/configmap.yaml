@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "imagebuild-controller.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "imagebuild-controller.labels" . | nindent 4 }}
+data:
+  application.yaml: |
+    spring:
+      application:
+        name: aipub-brewery-controller
+
+    brewery:
+      kubernetes:
+        verify-ssl: {{ .Values.config.brewery.kubernetes.verifySsl }}
+        kube-config:
+          mode: {{ .Values.config.brewery.kubernetes.kubeConfig.mode }}
+      imagebuild:
+        kaniko-image: {{ .Values.config.brewery.imagebuild.kanikoImage }}

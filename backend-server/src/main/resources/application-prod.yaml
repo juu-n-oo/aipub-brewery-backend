@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:brewery}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:brewery}
+    password: ${DB_PASSWORD:}
+  h2:
+    console:
+      enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+server:
+  port: ${SERVER_PORT:8080}
+
+brewery:
+  kubernetes:
+    verify-ssl: true
+    kube-config:
+      mode: IN_CLUSTER

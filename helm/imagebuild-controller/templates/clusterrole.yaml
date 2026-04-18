@@ -1,0 +1,26 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "imagebuild-controller.fullname" . }}
+  labels:
+    {{- include "imagebuild-controller.labels" . | nindent 4 }}
+rules:
+  # ImageBuild CR operations
+  - apiGroups: ["brewery.aipub.ten1010.io"]
+    resources: ["imagebuilds"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["brewery.aipub.ten1010.io"]
+    resources: ["imagebuilds/status"]
+    verbs: ["get", "patch"]
+  # ConfigMap operations (Dockerfile content)
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create"]
+  # Job operations (Kaniko build)
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "create", "watch"]
+  # Event recording
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create"]

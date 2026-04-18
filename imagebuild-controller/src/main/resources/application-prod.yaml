@@ -1,0 +1,7 @@
+brewery:
+  kubernetes:
+    verify-ssl: true
+    kube-config:
+      mode: IN_CLUSTER
+  imagebuild:
+    kaniko-image: ${KANIKO_IMAGE:gcr.io/kaniko-project/executor:latest}
