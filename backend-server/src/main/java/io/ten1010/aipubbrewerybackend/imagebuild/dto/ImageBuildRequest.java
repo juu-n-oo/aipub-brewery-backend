@@ -26,4 +26,10 @@ public class ImageBuildRequest {
     @Schema(description = "이미지 push용 Secret 이름 (미지정 시 기본 패턴 사용)", example = "image-registry-secret-project-aipub-ten1010-io-pjw")
     private String pushSecretRef;
 
+    @Schema(description = "빌드 컨텍스트로 사용할 PVC 이름 (COPY 명령어 사용 시 필요)", example = "data-storage-43d77785")
+    private String buildContextPvc;
+
+    @Schema(description = "PVC 내 빌드 컨텍스트 서브 경로 (미지정 시 PVC 루트 사용)", example = "/my-project")
+    private String buildContextSubPath;
+
 }

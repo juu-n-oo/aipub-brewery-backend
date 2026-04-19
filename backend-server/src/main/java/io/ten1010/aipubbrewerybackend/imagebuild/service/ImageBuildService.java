@@ -73,6 +73,8 @@ public class ImageBuildService {
                         .dockerfileContent(dockerfile.getContent())
                         .targetImage(fullImage)
                         .pushSecretRef(request.getPushSecretRef())
+                        .buildContextPvc(request.getBuildContextPvc())
+                        .buildContextSubPath(request.getBuildContextSubPath())
                         .build())
                 .build();
 
