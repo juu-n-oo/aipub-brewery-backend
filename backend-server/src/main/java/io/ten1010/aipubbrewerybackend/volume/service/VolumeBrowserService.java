@@ -55,16 +55,22 @@ public class VolumeBrowserService {
 
             Process process = exec.exec(namespace, podName, command, podName, false, false);
             String output;
+            String errorOutput;
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                 output = reader.lines().collect(Collectors.joining("\n"));
             }
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+                errorOutput = reader.lines().collect(Collectors.joining("\n"));
+            }
 
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                log.warn("exec ls failed: exitCode={}", exitCode);
+                log.warn("exec ls failed: exitCode={}, stdout=[{}], stderr=[{}]", exitCode, output, errorOutput);
                 throw new ResourceNotFoundException("Path not found: " + fullPath.replace(VOLUME_MOUNT_PATH, ""));
             }
+            log.debug("exec ls output for {}: [{}]", fullPath, output);
 
             return parseEntries(output);
         } catch (ResourceNotFoundException e) {
