@@ -50,7 +50,6 @@ public class VolumeBrowserService {
     private List<FileEntry> execListFiles(String namespace, String podName, String fullPath) {
         try {
             Exec exec = new Exec(apiClient);
-            // busybox ls: -l for details, -a for hidden files, -n for numeric uid/gid
             String[] command = {"ls", "-lan", fullPath};
 
             Process process = exec.exec(namespace, podName, command, podName, false, false);
@@ -88,7 +87,7 @@ public class VolumeBrowserService {
 
         return output.lines()
                 .filter(line -> !line.isBlank())
-                .filter(line -> !line.startsWith("total"))  // skip "total N" line from ls
+                .filter(line -> !line.startsWith("total"))
                 .map(this::parseLine)
                 .filter(Objects::nonNull)
                 .filter(e -> !".".equals(e.getName()) && !"..".equals(e.getName()))
@@ -98,14 +97,7 @@ public class VolumeBrowserService {
                 .toList();
     }
 
-    /**
-     * Parses a line from `ls -lan` output.
-     * Format: "drwxr-xr-x  2  0  0  4096 Jan  1 00:00 dirname"
-     * busybox ls -lan may vary slightly but generally:
-     * permissions links uid gid size month day time name
-     */
     private FileEntry parseLine(String line) {
-        // ls -lan output: permissions links uid gid size month day time/year name
         String[] parts = line.trim().split("\\s+", 9);
         if (parts.length < 9) {
             return null;
