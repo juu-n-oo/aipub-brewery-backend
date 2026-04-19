@@ -1,0 +1,27 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "backend-server.fullname" . }}-postgresql
+  labels:
+    {{- include "backend-server.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: {{ .Values.postgresql.persistence.size }}
+  local:
+    path: {{ .Values.postgresql.persistence.localPath }}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - {{ .Values.postgresql.persistence.nodeName }}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ .Values.postgresql.persistence.storageClassName }}
+  volumeMode: Filesystem
+{{- end }}

@@ -24,9 +24,9 @@ ingress:
   annotations: {}
   hosts:
     - host: brewery.example.com
-      paths:
-        - path: /
-          pathType: Prefix
+  frontend:
+    serviceName: brewery-web-aipub-brewery-web
+    servicePort: 80
   tls: []
 
 resources:
@@ -41,11 +41,35 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
+# PostgreSQL database (deployed as StatefulSet)
+postgresql:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "16"
+    pullPolicy: IfNotPresent
+  auth:
+    database: brewery
+    username: brewery
+    password: ""  # Required: set via --set or values override
+  persistence:
+    storageClassName: local
+    size: 8Gi
+    localPath: /root/local-pv/brewery-postgresql  # Path on the node
+    nodeName: ""  # Required: e.g. master1.example.com
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
 # Spring Boot application configuration
 config:
-  # Database
+  # Database - auto-configured when postgresql.enabled=true
   datasource:
-    url: ""       # Required: e.g. jdbc:postgresql://postgres:5432/brewery
+    url: ""       # Override only if using external DB
     username: ""
     password: ""
     driverClassName: org.postgresql.Driver

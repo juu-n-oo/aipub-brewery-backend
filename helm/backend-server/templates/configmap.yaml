@@ -11,7 +11,11 @@ data:
       application:
         name: aipub-brewery-backend
       datasource:
+        {{- if and .Values.postgresql.enabled (not .Values.config.datasource.url) }}
+        url: "jdbc:postgresql://{{ include "backend-server.fullname" . }}-postgresql:5432/{{ .Values.postgresql.auth.database }}"
+        {{- else }}
         url: {{ .Values.config.datasource.url | quote }}
+        {{- end }}
         driver-class-name: {{ .Values.config.datasource.driverClassName }}
       jpa:
         hibernate:

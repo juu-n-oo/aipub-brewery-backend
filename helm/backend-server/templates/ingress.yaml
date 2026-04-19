@@ -29,14 +29,19 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
-          {{- range .paths }}
-          - path: {{ .path }}
-            pathType: {{ .pathType }}
+          - path: /api
+            pathType: Prefix
             backend:
               service:
                 name: {{ include "backend-server.fullname" $ }}
                 port:
                   name: http
-          {{- end }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $.Values.ingress.frontend.serviceName }}
+                port:
+                  number: {{ $.Values.ingress.frontend.servicePort | default 80 }}
     {{- end }}
 {{- end }}
