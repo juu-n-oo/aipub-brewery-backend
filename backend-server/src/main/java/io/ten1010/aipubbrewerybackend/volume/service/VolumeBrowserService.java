@@ -1,7 +1,10 @@
 package io.ten1010.aipubbrewerybackend.volume.service;
 
-import io.kubernetes.client.Exec;
 import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.ApiException;
+import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.util.WebSocketStreamHandler;
+import io.kubernetes.client.util.WebSockets;
 import io.ten1010.aipubbrewerybackend.common.exception.ResourceNotFoundException;
 import io.ten1010.aipubbrewerybackend.volume.client.AipubVolumeClient;
 import io.ten1010.aipubbrewerybackend.volume.dto.*;
@@ -10,10 +13,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -50,48 +54,65 @@ public class VolumeBrowserService {
 
     private List<FileEntry> execListFiles(String namespace, String podName, String fullPath) {
         try {
-            Exec exec = new Exec(apiClient);
             String[] command = {"ls", "-lan", fullPath};
+            String execPath = buildExecPath(namespace, podName, podName, command);
 
-            Process process = exec.exec(namespace, podName, command, podName, false, false);
+            WebSocketStreamHandler handler = new WebSocketStreamHandler();
+            WebSockets.stream(execPath, "GET", apiClient, handler);
 
-            // Wait for the WebSocket connection to be established before reading streams.
-            // Exec.exec() starts the WebSocket asynchronously; reading immediately causes
-            // IllegalStateException if the connection hasn't opened yet.
-            // Give it up to 10 seconds to connect and complete.
-            boolean finished = process.waitFor(10, TimeUnit.SECONDS);
+            // Wait for WebSocket connection to be established
+            handler.waitForInitialized();
 
+            // Read stdout (stream 1)
             String output;
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+            try (InputStream is = handler.getInputStream(1);
+                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
                 output = reader.lines().collect(Collectors.joining("\n"));
             }
 
-            if (!finished) {
-                process.destroyForcibly();
-                log.error("exec ls timed out for pod {}/{}", namespace, podName);
-                throw new RuntimeException("Exec timed out");
-            }
-
-            int exitCode = process.exitValue();
-            if (exitCode != 0) {
-                String errorOutput;
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
-                    errorOutput = reader.lines().collect(Collectors.joining("\n"));
-                }
-                log.warn("exec ls failed: exitCode={}, stdout=[{}], stderr=[{}]", exitCode, output, errorOutput);
-                throw new ResourceNotFoundException("Path not found: " + fullPath.replace(VOLUME_MOUNT_PATH, ""));
-            }
             log.debug("exec ls output for {}: [{}]", fullPath, output);
+
+            // Check for errors via stderr (stream 2)
+            if (output.isBlank()) {
+                String errorOutput = "";
+                try (InputStream is = handler.getInputStream(2);
+                     BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                    errorOutput = reader.lines().collect(Collectors.joining("\n"));
+                } catch (Exception ignored) {
+                }
+                if (!errorOutput.isBlank()) {
+                    log.warn("exec ls stderr for {}: [{}]", fullPath, errorOutput);
+                    throw new ResourceNotFoundException("Path not found: " + fullPath.replace(VOLUME_MOUNT_PATH, ""));
+                }
+            }
 
             return parseEntries(output);
         } catch (ResourceNotFoundException e) {
             throw e;
+        } catch (ApiException e) {
+            log.error("Failed to exec in pod {}/{}: code={}, body={}", namespace, podName, e.getCode(), e.getResponseBody(), e);
+            throw new RuntimeException("Failed to browse volume files", e);
         } catch (Exception e) {
             log.error("Failed to exec in pod {}/{}: {}", namespace, podName, e.getMessage(), e);
             throw new RuntimeException("Failed to browse volume files", e);
         }
+    }
+
+    private String buildExecPath(String namespace, String podName, String container, String[] command) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("/api/v1/namespaces/")
+                .append(namespace)
+                .append("/pods/")
+                .append(podName)
+                .append("/exec?");
+
+        for (String cmd : command) {
+            sb.append("command=").append(URLEncoder.encode(cmd, StandardCharsets.UTF_8)).append("&");
+        }
+        sb.append("container=").append(URLEncoder.encode(container, StandardCharsets.UTF_8));
+        sb.append("&stdout=true&stderr=true");
+
+        return sb.toString();
     }
 
     private List<FileEntry> parseEntries(String output) {
