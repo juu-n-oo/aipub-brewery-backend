@@ -12,7 +12,7 @@ rules:
   # Pod access (get for exec prerequisite, log for Kaniko build logs)
   - apiGroups: [""]
     resources: ["pods"]
-    verbs: ["get"]
+    verbs: ["get", "list"]
   - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get"]
