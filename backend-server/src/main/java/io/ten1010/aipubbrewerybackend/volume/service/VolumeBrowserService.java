@@ -13,6 +13,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -53,19 +54,32 @@ public class VolumeBrowserService {
             String[] command = {"ls", "-lan", fullPath};
 
             Process process = exec.exec(namespace, podName, command, podName, false, false);
+
+            // Wait for the WebSocket connection to be established before reading streams.
+            // Exec.exec() starts the WebSocket asynchronously; reading immediately causes
+            // IllegalStateException if the connection hasn't opened yet.
+            // Give it up to 10 seconds to connect and complete.
+            boolean finished = process.waitFor(10, TimeUnit.SECONDS);
+
             String output;
-            String errorOutput;
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                 output = reader.lines().collect(Collectors.joining("\n"));
             }
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
-                errorOutput = reader.lines().collect(Collectors.joining("\n"));
+
+            if (!finished) {
+                process.destroyForcibly();
+                log.error("exec ls timed out for pod {}/{}", namespace, podName);
+                throw new RuntimeException("Exec timed out");
             }
 
-            int exitCode = process.waitFor();
+            int exitCode = process.exitValue();
             if (exitCode != 0) {
+                String errorOutput;
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+                    errorOutput = reader.lines().collect(Collectors.joining("\n"));
+                }
                 log.warn("exec ls failed: exitCode={}, stdout=[{}], stderr=[{}]", exitCode, output, errorOutput);
                 throw new ResourceNotFoundException("Path not found: " + fullPath.replace(VOLUME_MOUNT_PATH, ""));
             }
