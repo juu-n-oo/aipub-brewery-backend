@@ -9,7 +9,10 @@ rules:
   - apiGroups: ["brewery.aipub.ten1010.io"]
     resources: ["imagebuilds"]
     verbs: ["get", "list", "create"]
-  # Pod log access (Kaniko build logs)
+  # Pod access (get for exec prerequisite, log for Kaniko build logs)
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get"]
   - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get"]

@@ -1,8 +1,11 @@
 package io.ten1010.aipubbrewerycontroller.reconciler;
 
 import com.google.gson.Gson;
+import io.kubernetes.client.custom.V1Patch;
+import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CustomObjectsApi;
+import io.kubernetes.client.util.PatchUtils;
 import io.ten1010.aipubbrewerycontroller.config.ControllerProperties;
 import io.ten1010.aipubbrewerycontroller.cr.ImageBuildConstants;
 import io.ten1010.aipubbrewerycontroller.cr.ImageBuildResource;
@@ -20,6 +23,7 @@ import java.util.Map;
 public class ImageBuildStatusUpdater {
 
     private final CustomObjectsApi customObjectsApi;
+    private final ApiClient apiClient;
     private final ControllerProperties properties;
     private final EventRecorder eventRecorder;
     private final Gson gson = new Gson();
@@ -78,14 +82,19 @@ public class ImageBuildStatusUpdater {
 
     private void patchStatus(String namespace, String name, ImageBuildStatus status) {
         Map<String, Object> patch = Map.of("status", gson.fromJson(gson.toJson(status), Map.class));
+        String patchJson = gson.toJson(patch);
         try {
-            customObjectsApi.patchNamespacedCustomObjectStatus(
-                    properties.getGroup(),
-                    properties.getVersion(),
-                    namespace,
-                    properties.getPlural(),
-                    name,
-                    patch).execute();
+            PatchUtils.patch(
+                    Object.class,
+                    () -> customObjectsApi.patchNamespacedCustomObjectStatus(
+                            properties.getGroup(),
+                            properties.getVersion(),
+                            namespace,
+                            properties.getPlural(),
+                            name,
+                            new V1Patch(patchJson)).buildCall(null),
+                    V1Patch.PATCH_FORMAT_JSON_MERGE_PATCH,
+                    apiClient);
             log.info("Updated ImageBuild status: {}/{} -> {}", namespace, name, status.getPhase());
         } catch (ApiException e) {
             log.error("Failed to update ImageBuild status: {}/{}, code={}, body={}",
