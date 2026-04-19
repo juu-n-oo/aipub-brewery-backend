@@ -2,7 +2,6 @@ package io.ten1010.aipubbrewerybackend.volume.service;
 
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
-import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.util.WebSocketStreamHandler;
 import io.kubernetes.client.util.WebSockets;
 import io.ten1010.aipubbrewerybackend.common.exception.ResourceNotFoundException;
@@ -25,7 +24,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class VolumeBrowserService {
 
-    private static final String VOLUME_MOUNT_PATH = "/data";
+    private static final String ROOT_PATH = "/";
 
     private final AipubVolumeClient volumeClient;
     private final ApiClient apiClient;
@@ -41,7 +40,7 @@ public class VolumeBrowserService {
         VolumeInfo volumeInfo = volumeClient.getVolume(namespace, volumeName);
         String podName = volumeInfo.getPvcName();
 
-        String fullPath = VOLUME_MOUNT_PATH + normalizePath(path);
+        String fullPath = normalizePath(path);
         List<FileEntry> entries = execListFiles(namespace, podName, fullPath);
 
         return BrowseResponse.builder()
@@ -58,31 +57,33 @@ public class VolumeBrowserService {
             String execPath = buildExecPath(namespace, podName, podName, command);
 
             WebSocketStreamHandler handler = new WebSocketStreamHandler();
+
+            // Pre-create the stdout/stderr input streams BEFORE the WebSocket connects.
+            // This ensures the piped streams are ready to receive data when messages arrive.
+            // Without this, data can arrive and be written before getInputStream() creates the pipe,
+            // or the WebSocket can close before we call getInputStream(), causing IllegalStateException.
+            InputStream stdout = handler.getInputStream(1);
+            InputStream stderr = handler.getInputStream(2);
+
             WebSockets.stream(execPath, "GET", apiClient, handler);
 
-            // Wait for WebSocket connection to be established
-            handler.waitForInitialized();
-
-            // Read stdout (stream 1)
+            // Read stdout - this blocks until the WebSocket closes (command finishes)
             String output;
-            try (InputStream is = handler.getInputStream(1);
-                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(stdout, StandardCharsets.UTF_8))) {
                 output = reader.lines().collect(Collectors.joining("\n"));
             }
 
             log.debug("exec ls output for {}: [{}]", fullPath, output);
 
-            // Check for errors via stderr (stream 2)
+            // Check stderr if stdout was empty
             if (output.isBlank()) {
-                String errorOutput = "";
-                try (InputStream is = handler.getInputStream(2);
-                     BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                String errorOutput;
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(stderr, StandardCharsets.UTF_8))) {
                     errorOutput = reader.lines().collect(Collectors.joining("\n"));
-                } catch (Exception ignored) {
                 }
                 if (!errorOutput.isBlank()) {
                     log.warn("exec ls stderr for {}: [{}]", fullPath, errorOutput);
-                    throw new ResourceNotFoundException("Path not found: " + fullPath.replace(VOLUME_MOUNT_PATH, ""));
+                    throw new ResourceNotFoundException("Path not found: " + fullPath);
                 }
             }
 
@@ -160,7 +161,7 @@ public class VolumeBrowserService {
 
     private String normalizePath(String path) {
         if (path == null || path.isBlank() || "/".equals(path)) {
-            return "";
+            return "/";
         }
         String normalized = path.startsWith("/") ? path : "/" + path;
         if (normalized.endsWith("/") && normalized.length() > 1) {
