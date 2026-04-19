@@ -50,10 +50,8 @@ public class VolumeBrowserService {
     private List<FileEntry> execListFiles(String namespace, String podName, String fullPath) {
         try {
             Exec exec = new Exec(apiClient);
-            String[] command = {
-                    "find", fullPath, "-maxdepth", "1", "-not", "-path", fullPath,
-                    "-printf", "%f\\t%y\\t%s\\t%T+\\n"
-            };
+            // busybox ls: -l for details, -a for hidden files, -n for numeric uid/gid
+            String[] command = {"ls", "-lan", fullPath};
 
             Process process = exec.exec(namespace, podName, command, podName, false, false);
             String output;
@@ -64,12 +62,7 @@ public class VolumeBrowserService {
 
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                String errorOutput;
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
-                    errorOutput = reader.lines().collect(Collectors.joining("\n"));
-                }
-                log.warn("exec find failed: exitCode={}, stderr={}", exitCode, errorOutput);
+                log.warn("exec ls failed: exitCode={}", exitCode);
                 throw new ResourceNotFoundException("Path not found: " + fullPath.replace(VOLUME_MOUNT_PATH, ""));
             }
 
@@ -89,24 +82,34 @@ public class VolumeBrowserService {
 
         return output.lines()
                 .filter(line -> !line.isBlank())
+                .filter(line -> !line.startsWith("total"))  // skip "total N" line from ls
                 .map(this::parseLine)
                 .filter(Objects::nonNull)
+                .filter(e -> !".".equals(e.getName()) && !"..".equals(e.getName()))
                 .sorted(Comparator
                         .comparing((FileEntry e) -> e.getType() == FileEntry.FileType.FILE ? 1 : 0)
                         .thenComparing(FileEntry::getName))
                 .toList();
     }
 
+    /**
+     * Parses a line from `ls -lan` output.
+     * Format: "drwxr-xr-x  2  0  0  4096 Jan  1 00:00 dirname"
+     * busybox ls -lan may vary slightly but generally:
+     * permissions links uid gid size month day time name
+     */
     private FileEntry parseLine(String line) {
-        String[] parts = line.split("\t", 4);
-        if (parts.length < 4) {
+        // ls -lan output: permissions links uid gid size month day time/year name
+        String[] parts = line.trim().split("\\s+", 9);
+        if (parts.length < 9) {
             return null;
         }
 
-        String name = parts[0];
-        FileEntry.FileType type = "d".equals(parts[1]) ? FileEntry.FileType.DIRECTORY : FileEntry.FileType.FILE;
-        Long size = type == FileEntry.FileType.FILE ? parseLong(parts[2]) : null;
-        String modifiedAt = parts[3].trim();
+        String permissions = parts[0];
+        FileEntry.FileType type = permissions.startsWith("d") ? FileEntry.FileType.DIRECTORY : FileEntry.FileType.FILE;
+        Long size = type == FileEntry.FileType.FILE ? parseLong(parts[4]) : null;
+        String modifiedAt = parts[5] + " " + parts[6] + " " + parts[7];
+        String name = parts[8];
 
         return FileEntry.builder()
                 .name(name)
