@@ -79,7 +79,9 @@ class ImageBuildControllerDocsTest {
                                 fieldWithPath("dockerfileId").description("빌드할 Dockerfile의 ID"),
                                 fieldWithPath("targetImage").description("대상 이미지 이름 (registry/project/image)"),
                                 fieldWithPath("tag").description("이미지 태그"),
-                                fieldWithPath("pushSecretRef").description("이미지 push용 Secret 이름 (선택)").optional()
+                                fieldWithPath("pushSecretRef").description("이미지 push용 Secret 이름 (선택)").optional(),
+                                fieldWithPath("buildContextPvc").description("빌드 컨텍스트로 사용할 PVC 이름 (COPY 사용 시 필요)").optional(),
+                                fieldWithPath("buildContextSubPath").description("PVC 내 빌드 컨텍스트 서브 경로").optional()
                         ),
                         responseFields(
                                 fieldWithPath("name").description("ImageBuild CR 이름"),
