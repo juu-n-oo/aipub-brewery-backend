@@ -5,6 +5,7 @@ import io.kubernetes.client.PodLogs;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.apis.CustomObjectsApi;
 import io.ten1010.aipubbrewerybackend.common.exception.ResourceNotFoundException;
 import io.ten1010.aipubbrewerybackend.dockerfile.entity.Dockerfile;
@@ -129,7 +130,7 @@ public class ImageBuildService {
     }
 
     public String getBuildLogs(String namespace, String name) {
-        String podName = name + "-job";
+        String podName = findBuildPodName(namespace, name);
         try {
             return coreV1Api.readNamespacedPodLog(podName, namespace).execute();
         } catch (ApiException e) {
@@ -142,7 +143,7 @@ public class ImageBuildService {
     }
 
     public SseEmitter streamBuildLogs(String namespace, String name) {
-        String podName = name + "-job";
+        String podName = findBuildPodName(namespace, name);
         SseEmitter emitter = new SseEmitter(300_000L); // 5분 timeout
 
         logStreamExecutor.submit(() -> {
@@ -244,6 +245,23 @@ public class ImageBuildService {
             return Instant.parse(dateTimeStr);
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private String findBuildPodName(String namespace, String name) {
+        String jobName = name + "-job";
+        String labelSelector = "job-name=" + jobName;
+        try {
+            V1PodList podList = coreV1Api.listNamespacedPod(namespace)
+                    .labelSelector(labelSelector)
+                    .execute();
+            if (podList.getItems().isEmpty()) {
+                throw new ResourceNotFoundException("Build pod not found for job: " + namespace + "/" + jobName);
+            }
+            return podList.getItems().getFirst().getMetadata().getName();
+        } catch (ApiException e) {
+            log.error("Failed to find build pod: {}/{}, status={}", namespace, jobName, e.getCode(), e);
+            throw new RuntimeException("Failed to find build pod: " + e.getResponseBody(), e);
         }
     }
 
