@@ -19,7 +19,7 @@ rules:
   # Job operations (Kaniko build)
   - apiGroups: ["batch"]
     resources: ["jobs"]
-    verbs: ["get", "create", "watch"]
+    verbs: ["get", "list", "create", "watch"]
   # Event recording
   - apiGroups: [""]
     resources: ["events"]
