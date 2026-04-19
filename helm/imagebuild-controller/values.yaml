@@ -1,8 +1,8 @@
 replicaCount: 1
 
 image:
-  repository: ""  # Required: e.g. harbor.example.com/brewery/imagebuild-controller
-  tag: ""         # Defaults to Chart.appVersion
+  repository: image-build-controller  # Required: e.g. harbor.example.com/brewery/imagebuild-controller
+  tag: 0.0.1         # Defaults to Chart.appVersion
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -33,7 +33,7 @@ installCrd: true
 config:
   brewery:
     kubernetes:
-      verifySsl: true
+      verifySsl: false
       kubeConfig:
         mode: IN_CLUSTER
     imagebuild:

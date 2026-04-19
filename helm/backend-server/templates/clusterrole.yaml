@@ -19,7 +19,7 @@ rules:
   # Pod exec (Volume file browsing via AIPubVolume busybox Pod)
   - apiGroups: [""]
     resources: ["pods/exec"]
-    verbs: ["create"]
+    verbs: ["get", "create"]
   # AIPubVolume CR read (Volume browsing)
   - apiGroups: ["aipub.ten1010.io"]
     resources: ["aipubvolumes"]
