@@ -341,6 +341,30 @@ else
 fi
 
 #==============================================================================
+# Database Schema: Run SQL migrations
+#==============================================================================
+log_step "Database schema initialization"
+
+SQL_DIR="${SCRIPT_DIR}/../sql"
+if [ -d "${SQL_DIR}" ]; then
+    for sql_file in $(ls "${SQL_DIR}"/*.sql 2>/dev/null | sort); do
+        sql_filename=$(basename "${sql_file}")
+        log_info "Executing: ${sql_filename}"
+        sudo kubectl exec -n ${NAMESPACE} harbor-database-0 -c database -- \
+            env PGPASSWORD="${DB_PASSWORD}" \
+            psql -U aipub -d "${DB_NAME}" -f - < "${sql_file}"
+        if [ $? -eq 0 ]; then
+            log_success "${sql_filename} applied"
+        else
+            log_error "Failed to apply ${sql_filename}"
+            exit 1
+        fi
+    done
+else
+    log_warn "No SQL directory found at ${SQL_DIR}, skipping schema initialization"
+fi
+
+#==============================================================================
 # Deploy: imagebuild-controller
 #==============================================================================
 log_step "Deploying imagebuild-controller"
