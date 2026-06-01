@@ -32,6 +32,9 @@ public class DockerfileResponse {
     @Schema(description = "Dockerfile 내용", example = "FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime\nRUN pip install transformers")
     private String content;
 
+    @Schema(description = "Base 이미지 (FROM 대상)", example = "aipub-harbor.cluster7.idc1.ten1010.io/aipub/python:3.11")
+    private String baseImage;
+
     @Schema(description = "생성 시각", example = "2026-04-18T00:00:00Z")
     private Instant createdAt;
 

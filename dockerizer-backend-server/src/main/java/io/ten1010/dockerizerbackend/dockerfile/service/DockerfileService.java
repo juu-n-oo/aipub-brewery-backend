@@ -52,6 +52,7 @@ public class DockerfileService {
             entity.setDescription(request.getDescription());
         }
         entity.setContent(request.getContent());
+        entity.setBaseImage(request.getBaseImage());
         return mapper.toResponse(repository.save(entity));
     }
 

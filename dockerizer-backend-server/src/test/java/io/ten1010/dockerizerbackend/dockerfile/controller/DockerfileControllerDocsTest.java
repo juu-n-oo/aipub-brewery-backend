@@ -64,6 +64,7 @@ class DockerfileControllerDocsTest {
                 .name("pytorch-cuda12")
                 .description("PyTorch 2.1 + CUDA 12.1 기반 학습 환경")
                 .content("FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime\nCOPY requirements.txt /app/\nRUN pip install -r /app/requirements.txt")
+                .baseImage("pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime")
                 .createdAt(Instant.parse("2026-04-18T00:00:00Z"))
                 .updatedAt(Instant.parse("2026-04-18T00:00:00Z"))
                 .contextFiles(List.of(
@@ -86,6 +87,7 @@ class DockerfileControllerDocsTest {
                 .name("simple-pytorch")
                 .description(null)
                 .content("FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime\nRUN pip install transformers")
+                .baseImage("pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime")
                 .createdAt(Instant.parse("2026-04-18T00:00:00Z"))
                 .updatedAt(Instant.parse("2026-04-18T00:00:00Z"))
                 .contextFiles(List.of())
@@ -102,6 +104,7 @@ class DockerfileControllerDocsTest {
         request.setName("simple-pytorch");
         request.setDescription(null);
         request.setContent("FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime\nRUN pip install transformers");
+        request.setBaseImage("pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime");
 
         mockMvc.perform(post("/api/v1alpha1/dockerfiles")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -115,7 +118,8 @@ class DockerfileControllerDocsTest {
                                 fieldWithPath("username").description("소유자 사용자 이름"),
                                 fieldWithPath("name").description("Dockerfile 이름"),
                                 fieldWithPath("description").description("설명 (선택)").optional(),
-                                fieldWithPath("content").description("Dockerfile 내용")
+                                fieldWithPath("content").description("Dockerfile 내용"),
+                                fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)")
                         ),
                         responseFields(
                                 fieldWithPath("id").description("Dockerfile ID"),
@@ -124,6 +128,7 @@ class DockerfileControllerDocsTest {
                                 fieldWithPath("name").description("Dockerfile 이름"),
                                 fieldWithPath("description").description("설명").optional(),
                                 fieldWithPath("content").description("Dockerfile 내용"),
+                                fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)"),
                                 fieldWithPath("createdAt").description("생성 시각"),
                                 fieldWithPath("updatedAt").description("수정 시각"),
                                 fieldWithPath("contextFiles").description("빌드 컨텍스트 파일 목록")
@@ -148,6 +153,7 @@ class DockerfileControllerDocsTest {
                                 fieldWithPath("name").description("Dockerfile 이름"),
                                 fieldWithPath("description").description("설명").optional(),
                                 fieldWithPath("content").description("Dockerfile 내용"),
+                                fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)"),
                                 fieldWithPath("createdAt").description("생성 시각"),
                                 fieldWithPath("updatedAt").description("수정 시각"),
                                 fieldWithPath("contextFiles").description("빌드 컨텍스트 파일 목록"),
@@ -179,6 +185,7 @@ class DockerfileControllerDocsTest {
                                 fieldWithPath("[].name").description("Dockerfile 이름"),
                                 fieldWithPath("[].description").description("설명").optional(),
                                 fieldWithPath("[].content").description("Dockerfile 내용"),
+                                fieldWithPath("[].baseImage").description("Base 이미지 (FROM 대상)"),
                                 fieldWithPath("[].createdAt").description("생성 시각"),
                                 fieldWithPath("[].updatedAt").description("수정 시각"),
                                 fieldWithPath("[].contextFiles").description("빌드 컨텍스트 파일 목록"),
@@ -198,6 +205,7 @@ class DockerfileControllerDocsTest {
         request.setName("pytorch-cuda12-v2");
         request.setDescription("PyTorch 2.1 + CUDA 12.1 기반 학습 환경 (업데이트)");
         request.setContent("FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime\nCOPY requirements.txt /app/\nRUN pip install -r /app/requirements.txt");
+        request.setBaseImage("pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime");
 
         mockMvc.perform(put("/api/v1alpha1/dockerfiles/{id}", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -212,7 +220,8 @@ class DockerfileControllerDocsTest {
                         requestFields(
                                 fieldWithPath("name").description("Dockerfile 이름 (선택, 미입력 시 변경 안 함)").optional(),
                                 fieldWithPath("description").description("설명 (선택)").optional(),
-                                fieldWithPath("content").description("수정할 Dockerfile 내용")
+                                fieldWithPath("content").description("수정할 Dockerfile 내용"),
+                                fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)")
                         ),
                         responseFields(
                                 fieldWithPath("id").description("Dockerfile ID"),
@@ -221,6 +230,7 @@ class DockerfileControllerDocsTest {
                                 fieldWithPath("name").description("Dockerfile 이름"),
                                 fieldWithPath("description").description("설명").optional(),
                                 fieldWithPath("content").description("Dockerfile 내용"),
+                                fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)"),
                                 fieldWithPath("createdAt").description("생성 시각"),
                                 fieldWithPath("updatedAt").description("수정 시각"),
                                 fieldWithPath("contextFiles").description("빌드 컨텍스트 파일 목록"),

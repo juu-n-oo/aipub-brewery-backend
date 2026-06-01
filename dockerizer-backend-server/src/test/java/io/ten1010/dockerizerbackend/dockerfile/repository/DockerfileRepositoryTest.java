@@ -26,6 +26,7 @@ class DockerfileRepositoryTest {
                 .username(username)
                 .name(name)
                 .content("FROM ubuntu:22.04\nRUN apt-get update")
+                .baseImage("ubuntu:22.04")
                 .build();
         return dockerfileRepository.save(dockerfile);
     }

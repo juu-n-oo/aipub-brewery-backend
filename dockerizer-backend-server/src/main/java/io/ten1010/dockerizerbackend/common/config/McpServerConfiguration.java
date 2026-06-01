@@ -40,12 +40,14 @@ public class McpServerConfiguration {
                 @ToolParam(description = "프로젝트 이름 (namespace)") String project,
                 @ToolParam(description = "소유자 사용자 이름") String username,
                 @ToolParam(description = "Dockerfile 이름") String name,
-                @ToolParam(description = "Dockerfile 내용") String content) {
+                @ToolParam(description = "Dockerfile 내용") String content,
+                @ToolParam(description = "Base 이미지 (FROM 대상)") String baseImage) {
             DockerfileCreateRequest request = new DockerfileCreateRequest();
             request.setProject(project);
             request.setUsername(username);
             request.setName(name);
             request.setContent(content);
+            request.setBaseImage(baseImage);
             return service.create(request);
         }
 
@@ -64,9 +66,11 @@ public class McpServerConfiguration {
         @Tool(description = "Dockerfile content를 수정한다. COPY/ADD 지시자가 포함되면 거부된다.")
         public DockerfileResponse updateDockerfile(
                 @ToolParam(description = "Dockerfile ID") Long id,
-                @ToolParam(description = "수정할 Dockerfile 내용") String content) {
+                @ToolParam(description = "수정할 Dockerfile 내용") String content,
+                @ToolParam(description = "Base 이미지 (FROM 대상)") String baseImage) {
             DockerfileUpdateRequest request = new DockerfileUpdateRequest();
             request.setContent(content);
+            request.setBaseImage(baseImage);
             return service.update(id, request);
         }
 

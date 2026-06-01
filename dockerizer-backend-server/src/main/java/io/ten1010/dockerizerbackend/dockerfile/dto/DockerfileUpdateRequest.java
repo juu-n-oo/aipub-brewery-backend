@@ -20,4 +20,8 @@ public class DockerfileUpdateRequest {
     @Schema(description = "Dockerfile 내용", example = "FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime\nRUN pip install transformers datasets")
     private String content;
 
+    @NotBlank
+    @Schema(description = "Base 이미지 (FROM 대상)", example = "aipub-harbor.cluster7.idc1.ten1010.io/aipub/python:3.11")
+    private String baseImage;
+
 }

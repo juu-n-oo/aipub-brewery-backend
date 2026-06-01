@@ -40,6 +40,9 @@ public class Dockerfile {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "base_image", length = 512, nullable = false)
+    private String baseImage;
+
     @OneToMany(mappedBy = "dockerfile", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<BuildContextFile> contextFiles = new ArrayList<>();

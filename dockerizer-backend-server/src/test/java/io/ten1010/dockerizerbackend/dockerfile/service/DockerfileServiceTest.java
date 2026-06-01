@@ -47,6 +47,7 @@ class DockerfileServiceTest {
                 .name("pytorch-cuda12")
                 .description("PyTorch 2.1 기반 학습 환경")
                 .content("FROM pytorch/pytorch:2.1.0\nRUN pip install transformers")
+                .baseImage("pytorch/pytorch:2.1.0")
                 .contextFiles(new ArrayList<>())
                 .createdAt(Instant.parse("2026-04-18T00:00:00Z"))
                 .updatedAt(Instant.parse("2026-04-18T00:00:00Z"))
@@ -61,6 +62,7 @@ class DockerfileServiceTest {
                 .name("pytorch-cuda12")
                 .description("PyTorch 2.1 기반 학습 환경")
                 .content("FROM pytorch/pytorch:2.1.0\nRUN pip install transformers")
+                .baseImage("pytorch/pytorch:2.1.0")
                 .contextFiles(List.of())
                 .createdAt(Instant.parse("2026-04-18T00:00:00Z"))
                 .updatedAt(Instant.parse("2026-04-18T00:00:00Z"))
@@ -74,6 +76,7 @@ class DockerfileServiceTest {
         request.setUsername("joonwoo");
         request.setName("pytorch-cuda12");
         request.setContent("FROM pytorch/pytorch:2.1.0\nRUN pip install transformers");
+        request.setBaseImage("pytorch/pytorch:2.1.0");
 
         Dockerfile entity = sampleEntity();
         willDoNothing().given(validator).validate(any());
@@ -142,6 +145,7 @@ class DockerfileServiceTest {
         request.setName("pytorch-cuda12-v2");
         request.setDescription("PyTorch 2.1 기반 학습 환경 (업데이트)");
         request.setContent("FROM pytorch/pytorch:2.1.0\nRUN pip install transformers datasets");
+        request.setBaseImage("pytorch/pytorch:2.1.0-v2");
 
         willDoNothing().given(validator).validate(any());
         given(repository.findById(1L)).willReturn(Optional.of(entity));
@@ -153,6 +157,7 @@ class DockerfileServiceTest {
         assertThat(result).isNotNull();
         assertThat(entity.getName()).isEqualTo("pytorch-cuda12-v2");
         assertThat(entity.getDescription()).isEqualTo("PyTorch 2.1 기반 학습 환경 (업데이트)");
+        assertThat(entity.getBaseImage()).isEqualTo("pytorch/pytorch:2.1.0-v2");
         verify(validator).validate(request.getContent());
     }
 
