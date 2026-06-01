@@ -11,7 +11,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     // Kubernetes Client (official)
-    implementation 'io.kubernetes:client-java:24.0.0'
-    implementation 'io.kubernetes:client-java-spring-integration:24.0.0'
-    implementation 'io.kubernetes:client-java-extended:24.0.0'
+    implementation "io.kubernetes:client-java:$kubernetesClientVersion"
+    implementation "io.kubernetes:client-java-spring-integration:$kubernetesClientVersion"
+    implementation "io.kubernetes:client-java-extended:$kubernetesClientVersion"
 }

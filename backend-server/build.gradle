@@ -22,24 +22,24 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
 
     // Kubernetes Client (official)
-    implementation 'io.kubernetes:client-java:24.0.0'
-    implementation 'io.kubernetes:client-java-spring-integration:24.0.0'
+    implementation "io.kubernetes:client-java:$kubernetesClientVersion"
+    implementation "io.kubernetes:client-java-spring-integration:$kubernetesClientVersion"
 
     // MapStruct
-    implementation 'org.mapstruct:mapstruct:1.6.3'
-    annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
-    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
+    implementation "org.mapstruct:mapstruct:$mapstructVersion"
+    annotationProcessor "org.mapstruct:mapstruct-processor:$mapstructVersion"
+    annotationProcessor "org.projectlombok:lombok-mapstruct-binding:$lombokMapstructBindingVersion"
 
     // Springdoc OpenAPI (Swagger UI)
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocOpenapiVersion"
 
     // Spring AI MCP Server
-    implementation('org.springframework.ai:spring-ai-starter-mcp-server-webmvc:1.0.0') {
+    implementation("org.springframework.ai:spring-ai-starter-mcp-server-webmvc:$springAiMcpVersion") {
         exclude group: 'io.swagger.core.v3', module: 'swagger-annotations'
     }
 
-    // swagger-annotations 버전 통일 (springdoc 3.0.3 호환)
-    implementation 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.47'
+    // swagger-annotations 버전 통일 (springdoc 호환)
+    implementation "io.swagger.core.v3:swagger-annotations-jakarta:$swaggerAnnotationsVersion"
 
     // Spring Boot Test Slices (Spring Boot 4)
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
@@ -50,8 +50,6 @@ dependencies {
 
     // Spring REST Docs
     testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
-    // Note: spring-restdocs-asciidoctor omitted due to Asciidoctor 4.x compatibility issue
-    // Snippets directory is configured via asciidoctor attributes instead
 }
 
 test {
