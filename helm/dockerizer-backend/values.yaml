@@ -171,4 +171,7 @@ ingress:
   aipubBackend:
     serviceName: aipub-backend-gateway
     servicePort: 8080
-  tls: []
+  tls:
+    - secretName: aipub-tls
+      hosts:
+        - ""  # ## HELM installer — same as ingress.hosts[0].host ##

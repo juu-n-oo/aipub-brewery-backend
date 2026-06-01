@@ -385,6 +385,7 @@ deploy_helm_chart "dockerizer-backend" \
   --set image.repository="${BACKEND_IMAGE}" \
   --set image.tag="${BACKEND_TAG}" \
   --set ingress.hosts[0].host="${DOCKERIZER_HOST}" \
+  --set ingress.tls[0].hosts[0]="${DOCKERIZER_HOST}" \
   --set applicationYaml.spring.datasource.url="jdbc:postgresql://harbor-database.${NAMESPACE}.svc.cluster.local:5432/${DB_NAME}" \
   --set applicationYaml.spring.datasource.username="aipub" \
   --set applicationYaml.spring.datasource.password="${DB_PASSWORD}" \
