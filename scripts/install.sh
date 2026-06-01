@@ -327,13 +327,16 @@ fi
 #==============================================================================
 log_step "Database setup"
 
-setup_db "CREATE DATABASE ${DB_NAME} (skip if exists)" \
-    psql -U postgres -c \
-    "SELECT 'exists' FROM pg_database WHERE datname = '${DB_NAME}'" \
-    | grep -q 'exists' \
-    && log_info "Database '${DB_NAME}' already exists, skipping" \
-    || setup_db "CREATE DATABASE ${DB_NAME} OWNER aipub" \
+DB_EXISTS=$(sudo kubectl exec -n ${NAMESPACE} harbor-database-0 -c database -- \
+    env PGPASSWORD="${HARBOR_POSTGRES}" \
+    psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'" 2>/dev/null || true)
+
+if [ "$DB_EXISTS" = "1" ]; then
+    log_info "Database '${DB_NAME}' already exists, skipping"
+else
+    setup_db "CREATE DATABASE ${DB_NAME} OWNER aipub" \
         psql -U postgres -c "CREATE DATABASE ${DB_NAME} OWNER aipub;"
+fi
 
 #==============================================================================
 # Deploy: imagebuild-controller
