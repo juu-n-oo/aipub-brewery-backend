@@ -299,7 +299,7 @@ if [ "$BUILD_IMAGES" = true ]; then
 
     cd "${SCRIPT_DIR}/.."
     log_info "Building JAR artifacts..."
-    ./gradlew clean build -x test
+    ./gradlew clean :backend-server:bootJar :imagebuild-controller:bootJar -x test -x asciidoctor
 
     BACKEND_IMAGE_FULL="${IMAGE_BASE}/dockerizer-backend:${BACKEND_TAG}"
     CONTROLLER_IMAGE_FULL="${IMAGE_BASE}/imagebuild-controller:${CONTROLLER_TAG}"

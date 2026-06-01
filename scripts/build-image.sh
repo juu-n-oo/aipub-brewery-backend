@@ -18,7 +18,7 @@ CONTROLLER_IMAGE="${REGISTRY}/${REPOSITORY_BASE}/imagebuild-controller:${TAG}"
 #==============================================================================
 echo "==> Building JAR artifacts..."
 cd "${PROJECT_ROOT}"
-./gradlew clean build -x test
+./gradlew clean :backend-server:bootJar :imagebuild-controller:bootJar -x test -x asciidoctor
 echo "==> Gradle build complete"
 
 #==============================================================================
