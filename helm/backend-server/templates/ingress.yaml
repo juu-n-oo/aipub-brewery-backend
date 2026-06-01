@@ -1,4 +1,5 @@
 {{- if .Values.ingress.enabled }}
+{{- $aipubSvc := ternary .Values.ingress.aipubBackend.serviceName (printf "%s-external" .Values.ingress.aipubBackend.serviceName) (eq .Values.ingress.aipubBackend.serviceNamespace .Release.Namespace) }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -33,28 +34,28 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ $.Values.ingress.aipubBackend.serviceName }}
+                name: {{ $aipubSvc }}
                 port:
                   number: {{ $.Values.ingress.aipubBackend.servicePort }}
           - path: /api/v1alpha1/logout
             pathType: Prefix
             backend:
               service:
-                name: {{ $.Values.ingress.aipubBackend.serviceName }}
+                name: {{ $aipubSvc }}
                 port:
                   number: {{ $.Values.ingress.aipubBackend.servicePort }}
           - path: /api/v1alpha1/selfsubjectreviews
             pathType: Prefix
             backend:
               service:
-                name: {{ $.Values.ingress.aipubBackend.serviceName }}
+                name: {{ $aipubSvc }}
                 port:
                   number: {{ $.Values.ingress.aipubBackend.servicePort }}
           - path: /api/v1alpha1/k8sproxy
             pathType: Prefix
             backend:
               service:
-                name: {{ $.Values.ingress.aipubBackend.serviceName }}
+                name: {{ $aipubSvc }}
                 port:
                   number: {{ $.Values.ingress.aipubBackend.servicePort }}
           - path: /api

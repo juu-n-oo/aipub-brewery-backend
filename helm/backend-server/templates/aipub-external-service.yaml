@@ -1,8 +1,8 @@
-{{- if .Values.ingress.enabled }}
+{{- if and .Values.ingress.enabled (ne .Values.ingress.aipubBackend.serviceNamespace .Release.Namespace) }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.ingress.aipubBackend.serviceName }}
+  name: {{ .Values.ingress.aipubBackend.serviceName }}-external
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "backend-server.labels" . | nindent 4 }}
