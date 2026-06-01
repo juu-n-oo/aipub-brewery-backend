@@ -170,6 +170,5 @@ ingress:
     servicePort: 80
   aipubBackend:
     serviceName: aipub-backend-gateway
-    serviceNamespace: aipub
     servicePort: 8080
   tls: []
