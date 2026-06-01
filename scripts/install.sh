@@ -279,7 +279,7 @@ log_info "  Datadog:      ${DATA_DOG_ENABLED}"
 log_info "=========================================="
 log_info "  0. Database setup (CREATE DATABASE ${DB_NAME})"
 log_info "  1. imagebuild-controller (${CONTROLLER_TAG})"
-log_info "  2. backend-server        (${BACKEND_TAG})"
+log_info "  2. dockerizer-backend        (${BACKEND_TAG})"
 log_info "=========================================="
 log_info ""
 
@@ -348,11 +348,11 @@ deploy_helm_chart "imagebuild-controller" \
   --set agent.datadog="${DATA_DOG_ENABLED}"
 
 #==============================================================================
-# Deploy: backend-server
+# Deploy: dockerizer-backend
 #==============================================================================
-log_step "Deploying backend-server"
+log_step "Deploying dockerizer-backend"
 
-deploy_helm_chart "backend-server" \
+deploy_helm_chart "dockerizer-backend" \
   --set image.repository="${BACKEND_IMAGE}" \
   --set image.tag="${BACKEND_TAG}" \
   --set ingress.hosts[0].host="${DOCKERIZER_HOST}" \

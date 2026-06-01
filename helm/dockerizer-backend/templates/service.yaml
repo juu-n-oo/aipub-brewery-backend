@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "backend-server.fullname" . }}
+  name: {{ include "dockerizer-backend.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "backend-server.labels" . | nindent 4 }}
+    {{- include "dockerizer-backend.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   selector:
-    {{- include "backend-server.selectorLabels" . | nindent 4 }}
+    {{- include "dockerizer-backend.selectorLabels" . | nindent 4 }}
   ports:
     {{- range .Values.service.ports }}
     - name: {{ .name }}

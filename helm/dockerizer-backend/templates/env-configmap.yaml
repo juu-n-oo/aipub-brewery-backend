@@ -4,7 +4,7 @@ metadata:
   name: {{ .Release.Name }}-{{ .Values.envFrom.configMapSuffix }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "backend-server.labels" . | nindent 4 }}
+    {{- include "dockerizer-backend.labels" . | nindent 4 }}
 data:
   SERVER_PORT: {{ .Values.applicationYaml.server.port | quote }}
   SPRING_PROFILES_ACTIVE: {{ .Values.applicationYaml.spring.profiles.active | quote }}

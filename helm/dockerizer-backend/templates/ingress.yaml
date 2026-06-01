@@ -2,10 +2,10 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "backend-server.fullname" . }}
+  name: {{ include "dockerizer-backend.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "backend-server.labels" . | nindent 4 }}
+    {{- include "dockerizer-backend.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -61,7 +61,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "backend-server.fullname" $ }}
+                name: {{ include "dockerizer-backend.fullname" $ }}
                 port:
                   name: http
           - path: /
