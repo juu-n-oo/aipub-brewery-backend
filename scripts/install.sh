@@ -31,9 +31,14 @@ fi
 # Command Line Arguments
 #==============================================================================
 SKIP_CONFIRMATION=false
+BUILD_IMAGES=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --build)
+            BUILD_IMAGES=true
+            shift
+            ;;
         --skip-confirmation)
             SKIP_CONFIRMATION=true
             shift
@@ -47,6 +52,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Options:"
             echo "  --config <file>          Specify configuration JSON file"
+            echo "  --build                  Build and push Docker images before deploying"
             echo "  --skip-confirmation      Skip deployment confirmation prompts"
             echo "  -h, --help              Show this help message"
             exit 0
@@ -281,6 +287,39 @@ if [ "$SKIP_CONFIRMATION" = false ]; then
     log_info "You will be prompted to confirm each deployment."
     log_info "Tip: Use --skip-confirmation to deploy all without prompts"
     log_info ""
+fi
+
+#==============================================================================
+# Image Build & Push (optional)
+#==============================================================================
+if [ "$BUILD_IMAGES" = true ]; then
+    log_step "Building and pushing Docker images"
+
+    check_command docker
+
+    cd "${SCRIPT_DIR}/.."
+    log_info "Building JAR artifacts..."
+    ./gradlew clean build -x test
+
+    BACKEND_IMAGE_FULL="${IMAGE_BASE}/dockerizer-backend:${BACKEND_TAG}"
+    CONTROLLER_IMAGE_FULL="${IMAGE_BASE}/imagebuild-controller:${CONTROLLER_TAG}"
+
+    log_info "Building image: ${BACKEND_IMAGE_FULL}"
+    sudo docker build --platform linux/amd64 \
+      -t "${BACKEND_IMAGE_FULL}" \
+      -f backend-server/Dockerfile .
+
+    log_info "Building image: ${CONTROLLER_IMAGE_FULL}"
+    sudo docker build --platform linux/amd64 \
+      -t "${CONTROLLER_IMAGE_FULL}" \
+      -f imagebuild-controller/Dockerfile .
+
+    log_info "Pushing images..."
+    sudo docker push "${BACKEND_IMAGE_FULL}"
+    sudo docker push "${CONTROLLER_IMAGE_FULL}"
+    log_success "Images built and pushed"
+
+    cd "${SCRIPT_DIR}"
 fi
 
 #==============================================================================
