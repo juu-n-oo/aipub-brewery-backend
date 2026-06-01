@@ -299,7 +299,7 @@ if [ "$BUILD_IMAGES" = true ]; then
 
     cd "${SCRIPT_DIR}/.."
     log_info "Building JAR artifacts..."
-    ./gradlew clean :backend-server:bootJar :imagebuild-controller:bootJar -x test -x asciidoctor
+    ./gradlew clean :dockerizer-backend-server:bootJar :imagebuild-controller:bootJar -x test -x asciidoctor
 
     BACKEND_IMAGE_FULL="${IMAGE_BASE}/dockerizer-backend:${BACKEND_TAG}"
     CONTROLLER_IMAGE_FULL="${IMAGE_BASE}/imagebuild-controller:${CONTROLLER_TAG}"
@@ -307,7 +307,7 @@ if [ "$BUILD_IMAGES" = true ]; then
     log_info "Building image: ${BACKEND_IMAGE_FULL}"
     sudo docker build --platform linux/amd64 \
       -t "${BACKEND_IMAGE_FULL}" \
-      -f backend-server/Dockerfile .
+      -f dockerizer-backend-server/Dockerfile .
 
     log_info "Building image: ${CONTROLLER_IMAGE_FULL}"
     sudo docker build --platform linux/amd64 \

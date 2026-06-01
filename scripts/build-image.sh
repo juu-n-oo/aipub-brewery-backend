@@ -18,18 +18,18 @@ CONTROLLER_IMAGE="${REGISTRY}/${REPOSITORY_BASE}/imagebuild-controller:${TAG}"
 #==============================================================================
 echo "==> Building JAR artifacts..."
 cd "${PROJECT_ROOT}"
-./gradlew clean :backend-server:bootJar :imagebuild-controller:bootJar -x test -x asciidoctor
+./gradlew clean :dockerizer-backend-server:bootJar :imagebuild-controller:bootJar -x test -x asciidoctor
 echo "==> Gradle build complete"
 
 #==============================================================================
-# Docker Build — backend-server
+# Docker Build — dockerizer-backend-server
 #==============================================================================
 echo ""
 echo "==> Building image: ${BACKEND_IMAGE}"
 docker build \
   --platform "${PLATFORM}" \
   -t "${BACKEND_IMAGE}" \
-  -f "${PROJECT_ROOT}/backend-server/Dockerfile" \
+  -f "${PROJECT_ROOT}/dockerizer-backend-server/Dockerfile" \
   "${PROJECT_ROOT}"
 
 #==============================================================================
