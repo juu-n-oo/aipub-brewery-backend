@@ -1,10 +1,12 @@
 package io.ten1010.dockerizerbackend.volume.controller;
 
+import io.ten1010.dockerizerbackend.aipub.filter.AipubAuthenticationFilter;
 import io.ten1010.dockerizerbackend.volume.dto.*;
 import io.ten1010.dockerizerbackend.volume.service.VolumeBrowserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
@@ -25,10 +27,14 @@ import static org.springframework.restdocs.request.RequestDocumentation.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(VolumeController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @ExtendWith(RestDocumentationExtension.class)
 class VolumeControllerDocsTest {
 
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private AipubAuthenticationFilter aipubAuthenticationFilter;
 
     @MockitoBean
     private VolumeBrowserService service;
@@ -62,7 +68,7 @@ class VolumeControllerDocsTest {
                 .build();
         given(service.listVolumes("pjw")).willReturn(response);
 
-        mockMvc.perform(get("/api/v1/volumes/{namespace}", "pjw"))
+        mockMvc.perform(get("/api/v1alpha1/volumes/{namespace}", "pjw"))
                 .andExpect(status().isOk())
                 .andDo(document("volume-list",
                         preprocessResponse(prettyPrint()),
@@ -108,7 +114,7 @@ class VolumeControllerDocsTest {
                 .build();
         given(service.browse("pjw", "data-storage", "/")).willReturn(response);
 
-        mockMvc.perform(get("/api/v1/volumes/{namespace}/{volumeName}/browse", "pjw", "data-storage")
+        mockMvc.perform(get("/api/v1alpha1/volumes/{namespace}/{volumeName}/browse", "pjw", "data-storage")
                         .param("path", "/"))
                 .andExpect(status().isOk())
                 .andDo(document("volume-browse",
@@ -155,7 +161,7 @@ class VolumeControllerDocsTest {
                 .build();
         given(service.browse("pjw", "data-storage", "/models/checkpoints")).willReturn(response);
 
-        mockMvc.perform(get("/api/v1/volumes/{namespace}/{volumeName}/browse", "pjw", "data-storage")
+        mockMvc.perform(get("/api/v1alpha1/volumes/{namespace}/{volumeName}/browse", "pjw", "data-storage")
                         .param("path", "/models/checkpoints"))
                 .andExpect(status().isOk())
                 .andDo(document("volume-browse-subdir",

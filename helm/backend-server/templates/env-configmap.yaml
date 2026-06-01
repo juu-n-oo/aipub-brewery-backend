@@ -13,6 +13,7 @@ data:
   SPRING_DATASOURCE_DRIVER_CLASS_NAME: {{ .Values.applicationYaml.spring.datasource.driverClassName | quote }}
   SPRING_JPA_HIBERNATE_DDL_AUTO: {{ .Values.applicationYaml.spring.jpa.ddlAuto | quote }}
   SPRING_JPA_SHOW_SQL: {{ .Values.applicationYaml.spring.jpa.showSql | quote }}
+  DOCKERIZER_AIPUB_BASE_URL: {{ .Values.applicationYaml.dockerizer.aipub.baseUrl | quote }}
   DOCKERIZER_KUBERNETES_VERIFY_SSL: {{ .Values.applicationYaml.dockerizer.kubernetes.verifySsl | quote }}
   DOCKERIZER_KUBERNETES_KUBE_CONFIG_MODE: {{ .Values.applicationYaml.dockerizer.kubernetes.kubeConfig.mode | quote }}
   {{- range $i, $v := .Values.applicationYaml.dockerizer.dockerfile.forbiddenInstructions }}

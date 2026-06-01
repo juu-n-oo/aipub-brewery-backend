@@ -1,6 +1,7 @@
 package io.ten1010.dockerizerbackend.dockerfile.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.ten1010.dockerizerbackend.aipub.filter.AipubAuthenticationFilter;
 import io.ten1010.dockerizerbackend.dockerfile.dto.BuildContextFileResponse;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileCreateRequest;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileResponse;
@@ -9,6 +10,7 @@ import io.ten1010.dockerizerbackend.dockerfile.service.DockerfileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
@@ -33,12 +35,16 @@ import static org.springframework.restdocs.request.RequestDocumentation.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(DockerfileController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @ExtendWith(RestDocumentationExtension.class)
 class DockerfileControllerDocsTest {
 
     private MockMvc mockMvc;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @MockitoBean
+    private AipubAuthenticationFilter aipubAuthenticationFilter;
 
     @MockitoBean
     private DockerfileService service;
@@ -97,7 +103,7 @@ class DockerfileControllerDocsTest {
         request.setDescription(null);
         request.setContent("FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime\nRUN pip install transformers");
 
-        mockMvc.perform(post("/api/v1/dockerfiles")
+        mockMvc.perform(post("/api/v1alpha1/dockerfiles")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -128,7 +134,7 @@ class DockerfileControllerDocsTest {
     void getDockerfileById() throws Exception {
         given(service.getById(1L)).willReturn(sampleResponse());
 
-        mockMvc.perform(get("/api/v1/dockerfiles/{id}", 1L))
+        mockMvc.perform(get("/api/v1alpha1/dockerfiles/{id}", 1L))
                 .andExpect(status().isOk())
                 .andDo(document("dockerfile-get",
                         preprocessResponse(prettyPrint()),
@@ -157,7 +163,7 @@ class DockerfileControllerDocsTest {
     void listDockerfiles() throws Exception {
         given(service.listByProject("pjw")).willReturn(List.of(sampleResponse(), sampleResponseWithoutFiles()));
 
-        mockMvc.perform(get("/api/v1/dockerfiles")
+        mockMvc.perform(get("/api/v1alpha1/dockerfiles")
                         .param("project", "pjw"))
                 .andExpect(status().isOk())
                 .andDo(document("dockerfile-list",
@@ -193,7 +199,7 @@ class DockerfileControllerDocsTest {
         request.setDescription("PyTorch 2.1 + CUDA 12.1 기반 학습 환경 (업데이트)");
         request.setContent("FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime\nCOPY requirements.txt /app/\nRUN pip install -r /app/requirements.txt");
 
-        mockMvc.perform(put("/api/v1/dockerfiles/{id}", 1L)
+        mockMvc.perform(put("/api/v1alpha1/dockerfiles/{id}", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -228,7 +234,7 @@ class DockerfileControllerDocsTest {
 
     @Test
     void deleteDockerfile() throws Exception {
-        mockMvc.perform(delete("/api/v1/dockerfiles/{id}", 1L))
+        mockMvc.perform(delete("/api/v1alpha1/dockerfiles/{id}", 1L))
                 .andExpect(status().isNoContent())
                 .andDo(document("dockerfile-delete",
                         pathParameters(

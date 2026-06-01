@@ -1,6 +1,7 @@
 package io.ten1010.dockerizerbackend.imagebuild.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.ten1010.dockerizerbackend.aipub.filter.AipubAuthenticationFilter;
 import io.ten1010.dockerizerbackend.imagebuild.dto.ImageBuildRequest;
 import io.ten1010.dockerizerbackend.imagebuild.dto.ImageBuildResponse;
 import io.ten1010.dockerizerbackend.imagebuild.service.ImageBuildService;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
@@ -32,12 +34,16 @@ import static org.springframework.restdocs.request.RequestDocumentation.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ImageBuildController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @ExtendWith(RestDocumentationExtension.class)
 class ImageBuildControllerDocsTest {
 
     private MockMvc mockMvc;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @MockitoBean
+    private AipubAuthenticationFilter aipubAuthenticationFilter;
 
     @MockitoBean
     private ImageBuildService service;
@@ -68,7 +74,7 @@ class ImageBuildControllerDocsTest {
         request.setTargetImage("harbor.aipub.io/pjw/my-pytorch");
         request.setTag("v1.0");
 
-        mockMvc.perform(post("/api/v1/builds")
+        mockMvc.perform(post("/api/v1alpha1/builds")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isAccepted())
@@ -115,7 +121,7 @@ class ImageBuildControllerDocsTest {
                 .build();
         given(service.getBuildStatus("pjw", "imagebuild-a1b2c3d4")).willReturn(response);
 
-        mockMvc.perform(get("/api/v1/builds/{namespace}/{name}", "pjw", "imagebuild-a1b2c3d4"))
+        mockMvc.perform(get("/api/v1alpha1/builds/{namespace}/{name}", "pjw", "imagebuild-a1b2c3d4"))
                 .andExpect(status().isOk())
                 .andDo(document("build-status",
                         preprocessResponse(prettyPrint()),
@@ -168,7 +174,7 @@ class ImageBuildControllerDocsTest {
         );
         given(service.listBuilds("pjw")).willReturn(responses);
 
-        mockMvc.perform(get("/api/v1/builds")
+        mockMvc.perform(get("/api/v1alpha1/builds")
                         .param("project", "pjw"))
                 .andExpect(status().isOk())
                 .andDo(document("build-list",
@@ -196,7 +202,7 @@ class ImageBuildControllerDocsTest {
         given(service.getBuildLogs("pjw", "imagebuild-a1b2c3d4"))
                 .willReturn("INFO[0000] Resolved base name pytorch/pytorch:2.1.0\nINFO[0001] Building layer...");
 
-        mockMvc.perform(get("/api/v1/builds/{namespace}/{name}/logs", "pjw", "imagebuild-a1b2c3d4"))
+        mockMvc.perform(get("/api/v1alpha1/builds/{namespace}/{name}/logs", "pjw", "imagebuild-a1b2c3d4"))
                 .andExpect(status().isOk())
                 .andDo(document("build-logs",
                         preprocessResponse(prettyPrint()),

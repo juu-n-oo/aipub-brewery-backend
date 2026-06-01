@@ -16,7 +16,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/builds")
+@RequestMapping("/api/v1alpha1/builds")
 @RequiredArgsConstructor
 @Tag(name = "ImageBuild", description = "이미지 빌드 관리 (트리거, 목록, 상태 조회, 로그)")
 public class ImageBuildController {

@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/dockerfiles/{dockerfileId}/files")
+@RequestMapping("/api/v1alpha1/dockerfiles/{dockerfileId}/files")
 @RequiredArgsConstructor
 @Tag(name = "BuildContextFile", description = "빌드 컨텍스트 파일 관리 (업로드/조회/삭제)")
 public class BuildContextFileController {

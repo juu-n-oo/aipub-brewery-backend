@@ -11,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/registries")
+@RequestMapping("/api/v1alpha1/registries")
 @Tag(name = "Registry", description = "외부 컨테이너 레지스트리 프록시 (NGC, HuggingFace)")
 public class RegistryController {
 

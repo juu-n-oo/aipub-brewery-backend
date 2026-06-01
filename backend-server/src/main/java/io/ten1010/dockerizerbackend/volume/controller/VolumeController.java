@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/volumes")
+@RequestMapping("/api/v1alpha1/volumes")
 @RequiredArgsConstructor
 @Tag(name = "Volume", description = "AIPubVolume 조회 및 파일 브라우저")
 public class VolumeController {

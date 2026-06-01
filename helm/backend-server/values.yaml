@@ -74,6 +74,8 @@ applicationYaml:
       ddlAuto: validate
       showSql: false
   dockerizer:
+    aipub:
+      baseUrl: "http://aipub-backend-gateway.aipub.svc.cluster.local:8080"
     kubernetes:
       verifySsl: true
       kubeConfig:
@@ -166,4 +168,8 @@ ingress:
   frontend:
     serviceName: dockerizer-web
     servicePort: 80
+  aipubBackend:
+    serviceName: aipub-backend-gateway
+    serviceNamespace: aipub
+    servicePort: 8080
   tls: []

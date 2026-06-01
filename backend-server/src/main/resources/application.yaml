@@ -36,6 +36,8 @@ springdoc:
     path: /swagger-ui
 
 dockerizer:
+  aipub:
+    base-url: http://localhost:9090
   kubernetes:
     verify-ssl: false
     kube-config:

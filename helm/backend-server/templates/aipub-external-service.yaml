@@ -1,0 +1,12 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.ingress.aipubBackend.serviceName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "backend-server.labels" . | nindent 4 }}
+spec:
+  type: ExternalName
+  externalName: {{ .Values.ingress.aipubBackend.serviceName }}.{{ .Values.ingress.aipubBackend.serviceNamespace }}.svc.cluster.local
+{{- end }}

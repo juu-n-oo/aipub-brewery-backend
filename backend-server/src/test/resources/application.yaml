@@ -10,6 +10,8 @@ spring:
     show-sql: false
 
 dockerizer:
+  aipub:
+    base-url: http://localhost:9999
   kubernetes:
     verify-ssl: false
     kube-config:

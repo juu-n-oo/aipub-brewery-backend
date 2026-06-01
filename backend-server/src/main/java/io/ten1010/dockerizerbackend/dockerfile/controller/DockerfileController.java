@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/dockerfiles")
+@RequestMapping("/api/v1alpha1/dockerfiles")
 @RequiredArgsConstructor
 @Tag(name = "Dockerfile", description = "Dockerfile 관리 (CRUD)")
 public class DockerfileController {
