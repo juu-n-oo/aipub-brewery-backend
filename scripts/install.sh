@@ -124,7 +124,7 @@ setup_db() {
         done
     fi
 
-    sudo kubectl exec -n ${NAMESPACE} harbor-database-0 -i -- \
+    sudo kubectl exec -n ${NAMESPACE} harbor-database-0 -c database -- \
       env PGPASSWORD="${HARBOR_POSTGRES}" \
       "$@"
 
@@ -329,9 +329,11 @@ log_step "Database setup"
 
 DB_EXISTS=$(sudo kubectl exec -n ${NAMESPACE} harbor-database-0 -c database -- \
     env PGPASSWORD="${HARBOR_POSTGRES}" \
-    psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'" 2>/dev/null || true)
+    psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'" 2>&1)
+DB_EXISTS=$(echo "${DB_EXISTS}" | tr -d '[:space:]')
+log_info "DB existence check result: '${DB_EXISTS}'"
 
-if [ "$DB_EXISTS" = "1" ]; then
+if [ "${DB_EXISTS}" = "1" ]; then
     log_info "Database '${DB_NAME}' already exists, skipping"
 else
     setup_db "CREATE DATABASE ${DB_NAME} OWNER aipub" \
