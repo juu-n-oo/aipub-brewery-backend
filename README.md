@@ -65,18 +65,37 @@ ImageBuild Controller가 동작하려면 CRD가 클러스터에 설치되어 있
 kubectl apply -f k8s/imagebuild-crd.yaml
 ```
 
+## 배포
+
+AIPub Ingress(`aipub-backend-adapter`)의 sub path로 라우팅된다.
+
+- **프론트엔드**: `https://aipub.cluster10.idc1.ten1010.io/dockerizer`
+- **API**: `/api/v1alpha1/{dockerfiles,builds,volumes,registries}` → dockerizer-backend
+- 자체 Ingress를 생성하지 않으며, `install.sh`가 기존 AIPub Ingress에 `kubectl patch`로 path를 추가한다.
+
+```bash
+# 설치
+sudo ./scripts/install.sh --config scripts/config.json
+```
+
 ## 데이터 흐름
 
 ```
 [User Browser]
-  └─ dockerizer-web (프론트엔드)
+  └─ dockerizer-web (프론트엔드, /dockerizer sub path)
       │
-      └─ backend-server (REST API)
-          ├─ Dockerfile 저장/조회 (DB)
-          ├─ ImageBuild CR 생성 ──────→ K8s API Server
-          ├─ CR 상태 조회 ←────────── K8s API Server
-          └─ Pod 로그 조회 ←────────── K8s API Server
-                                          │
+      └─ AIPub Ingress (aipub-backend-adapter)
+          │
+          ├─ /api/v1alpha1/{dockerfiles,builds,volumes,registries}
+          │   └─ backend-server (REST API)
+          │       ├─ Dockerfile 저장/조회 (DB)
+          │       ├─ ImageBuild CR 생성 ──────→ K8s API Server
+          │       ├─ CR 상태 조회 ←────────── K8s API Server
+          │       └─ Pod 로그 조회 ←────────── K8s API Server
+          │
+          └─ /api/v1alpha1/{login,logout,selfsubjectreviews,k8sproxy}
+              └─ AIPub backend (기존)
+
                                    imagebuild-controller (Operator)
                                           ├─ CR watch
                                           ├─ Kaniko Pod 생성

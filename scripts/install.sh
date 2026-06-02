@@ -229,8 +229,9 @@ BACKEND_IMAGE="${IMAGE_BASE}/dockerizer-backend"
 CONTROLLER_IMAGE="${IMAGE_BASE}/imagebuild-controller"
 KANIKO_IMAGE="${IMAGE_BASE}/kaniko-executor:${KANIKO_VERSION}"
 
-# Domain
-DOCKERIZER_HOST=$(${YQ_COMMAND} -r '.domain.dockerizer_host' "$CONFIG_FILE")
+# Domain (AIPub Ingress sub path 방식)
+AIPUB_HOST=$(${YQ_COMMAND} -r '.domain.aipub_host' "$CONFIG_FILE")
+AIPUB_INGRESS_NAME=$(${YQ_COMMAND} -r '.domain.aipub_ingress_name // "aipub-backend-adapter"' "$CONFIG_FILE")
 
 # Agent
 DATA_DOG_ENABLED=$(${YQ_COMMAND} -r '.agent.datadog // "false"' "$CONFIG_FILE")
@@ -273,13 +274,15 @@ log_step "Deployment Plan"
 log_info "=========================================="
 log_info "  Namespace:    ${NAMESPACE}"
 log_info "  Registry:     ${IMAGE_BASE}"
-log_info "  Dockerizer:   ${DOCKERIZER_HOST}"
+log_info "  AIPub Host:   ${AIPUB_HOST}"
+log_info "  AIPub Ingress: ${AIPUB_INGRESS_NAME}"
 log_info "  Database:     harbor-database/${DB_NAME}"
 log_info "  Datadog:      ${DATA_DOG_ENABLED}"
 log_info "=========================================="
 log_info "  0. Database setup (CREATE DATABASE ${DB_NAME})"
 log_info "  1. imagebuild-controller (${CONTROLLER_TAG})"
 log_info "  2. dockerizer-backend        (${BACKEND_TAG})"
+log_info "  3. AIPub Ingress patch       (${AIPUB_INGRESS_NAME})"
 log_info "=========================================="
 log_info ""
 
@@ -384,8 +387,6 @@ log_step "Deploying dockerizer-backend"
 deploy_helm_chart "dockerizer-backend" \
   --set image.repository="${BACKEND_IMAGE}" \
   --set image.tag="${BACKEND_TAG}" \
-  --set ingress.hosts[0].host="${DOCKERIZER_HOST}" \
-  --set ingress.tls[0].hosts[0]="${DOCKERIZER_HOST}" \
   --set applicationYaml.spring.datasource.url="jdbc:postgresql://harbor-database.${NAMESPACE}.svc.cluster.local:5432/${DB_NAME}" \
   --set applicationYaml.spring.datasource.username="aipub" \
   --set applicationYaml.spring.datasource.password="${DB_PASSWORD}" \
@@ -393,8 +394,76 @@ deploy_helm_chart "dockerizer-backend" \
   --set agent.datadog="${DATA_DOG_ENABLED}"
 
 #==============================================================================
+# Patch AIPub Ingress: add Dockerizer routing paths
+#==============================================================================
+log_step "Patching AIPub Ingress (${AIPUB_INGRESS_NAME})"
+
+patch_aipub_ingress() {
+    if ! confirm_deployment "AIPub Ingress patch"; then
+        log_info "Skipped AIPub Ingress patch"
+        return 0
+    fi
+
+    local backup_dir="${BACKUP_BASE_DIR}/aipub-ingress"
+    mkdir -p "${backup_dir}"
+
+    log_info "Backing up current AIPub Ingress..."
+    sudo kubectl get ingress -n ${NAMESPACE} ${AIPUB_INGRESS_NAME} -o yaml > "${backup_dir}/before.yaml"
+
+    # Dockerizer API paths — must be inserted before the generic /api path
+    # so that specific dockerizer resource paths take priority.
+    local PATCH='[
+      {"op":"add","path":"/spec/rules/0/http/paths/-","value":{
+        "path":"/api/v1alpha1/dockerfiles","pathType":"Prefix",
+        "backend":{"service":{"name":"dockerizer-backend","port":{"number":8080}}}
+      }},
+      {"op":"add","path":"/spec/rules/0/http/paths/-","value":{
+        "path":"/api/v1alpha1/builds","pathType":"Prefix",
+        "backend":{"service":{"name":"dockerizer-backend","port":{"number":8080}}}
+      }},
+      {"op":"add","path":"/spec/rules/0/http/paths/-","value":{
+        "path":"/api/v1alpha1/volumes","pathType":"Prefix",
+        "backend":{"service":{"name":"dockerizer-backend","port":{"number":8080}}}
+      }},
+      {"op":"add","path":"/spec/rules/0/http/paths/-","value":{
+        "path":"/api/v1alpha1/registries","pathType":"Prefix",
+        "backend":{"service":{"name":"dockerizer-backend","port":{"number":8080}}}
+      }},
+      {"op":"add","path":"/spec/rules/0/http/paths/-","value":{
+        "path":"/dockerizer","pathType":"Prefix",
+        "backend":{"service":{"name":"dockerizer-web","port":{"number":80}}}
+      }}
+    ]'
+
+    sudo kubectl patch ingress -n ${NAMESPACE} ${AIPUB_INGRESS_NAME} \
+        --type='json' \
+        -p "${PATCH}"
+
+    if [ $? -eq 0 ]; then
+        log_success "AIPub Ingress patched successfully"
+        sudo kubectl get ingress -n ${NAMESPACE} ${AIPUB_INGRESS_NAME} -o yaml > "${backup_dir}/after.yaml"
+        {
+            echo "=============================================="
+            echo "  Change Report: AIPub Ingress Patch"
+            echo "  Date: $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "  Namespace: ${NAMESPACE}"
+            echo "=============================================="
+            echo ""
+            diff -u "${backup_dir}/before.yaml" "${backup_dir}/after.yaml" || true
+        } > "${backup_dir}/change-report.txt"
+        log_info "Change report: ${backup_dir}/change-report.txt"
+    else
+        log_error "Failed to patch AIPub Ingress"
+        log_info "Backup saved at: ${backup_dir}/before.yaml"
+        exit 1
+    fi
+}
+
+patch_aipub_ingress
+
+#==============================================================================
 # Completion
 #==============================================================================
 log_step "Installation Complete"
 log_success "Dockerizer has been deployed to namespace '${NAMESPACE}'"
-log_info "Access URL: https://${DOCKERIZER_HOST}"
+log_info "Access URL: https://${AIPUB_HOST}/dockerizer"

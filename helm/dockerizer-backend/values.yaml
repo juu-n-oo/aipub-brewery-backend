@@ -160,18 +160,4 @@ readinessProbe:
   failureThreshold: 3
 
 ingress:
-  enabled: true
-  className: "cilium"
-  annotations: {}
-  hosts:
-    - host: ""  # ## HELM installer ##
-  frontend:
-    serviceName: dockerizer-web
-    servicePort: 80
-  aipubBackend:
-    serviceName: aipub-backend-gateway
-    servicePort: 8080
-  tls:
-    - secretName: aipub-tls
-      hosts:
-        - ""  # ## HELM installer — same as ingress.hosts[0].host ##
+  enabled: false  # Dockerizer는 AIPub Ingress의 sub path로 라우팅됨 (install.sh에서 패치)

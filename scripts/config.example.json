@@ -9,7 +9,8 @@
   },
 
   "domain": {
-    "dockerizer_host": "dockerizer.cluster7.idc1.ten1010.io"
+    "aipub_host": "aipub.cluster10.idc1.ten1010.io",
+    "aipub_ingress_name": "aipub-backend-adapter"
   },
 
   "agent": {
