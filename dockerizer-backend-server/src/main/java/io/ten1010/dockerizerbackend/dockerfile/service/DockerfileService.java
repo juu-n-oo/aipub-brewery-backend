@@ -23,9 +23,10 @@ public class DockerfileService {
     private final DockerfileValidator validator;
 
     @Transactional
-    public DockerfileResponse create(DockerfileCreateRequest request) {
+    public DockerfileResponse create(DockerfileCreateRequest request, String username) {
         validator.validate(request.getContent());
         Dockerfile entity = mapper.toEntity(request);
+        entity.setUsername(username);
         return mapper.toResponse(repository.save(entity));
     }
 

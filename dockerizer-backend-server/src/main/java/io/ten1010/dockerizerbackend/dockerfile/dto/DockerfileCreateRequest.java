@@ -15,10 +15,6 @@ public class DockerfileCreateRequest {
     private String project;
 
     @NotBlank
-    @Schema(description = "소유자 사용자 이름", example = "joonwoo")
-    private String username;
-
-    @NotBlank
     @Schema(description = "Dockerfile 이름", example = "pytorch-cuda12")
     private String name;
 

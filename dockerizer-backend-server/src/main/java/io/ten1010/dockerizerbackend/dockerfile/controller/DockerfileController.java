@@ -10,6 +10,7 @@ import io.ten1010.dockerizerbackend.dockerfile.service.DockerfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,8 +26,10 @@ public class DockerfileController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Dockerfile 생성", description = "새 Dockerfile을 생성한다. COPY는 허용되며, ADD 지시자가 포함된 경우 reject된다.")
-    public DockerfileResponse create(@Valid @RequestBody DockerfileCreateRequest request) {
-        return service.create(request);
+    public DockerfileResponse create(@Valid @RequestBody DockerfileCreateRequest request,
+                                     Authentication authentication) {
+        String username = authentication.getName();
+        return service.create(request, username);
     }
 
     @GetMapping("/{id}")

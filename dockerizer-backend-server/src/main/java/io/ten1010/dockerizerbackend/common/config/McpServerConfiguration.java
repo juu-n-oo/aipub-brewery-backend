@@ -44,11 +44,10 @@ public class McpServerConfiguration {
                 @ToolParam(description = "Base 이미지 (FROM 대상)") String baseImage) {
             DockerfileCreateRequest request = new DockerfileCreateRequest();
             request.setProject(project);
-            request.setUsername(username);
             request.setName(name);
             request.setContent(content);
             request.setBaseImage(baseImage);
-            return service.create(request);
+            return service.create(request, username);
         }
 
         @Tool(description = "ID로 Dockerfile을 조회한다.")

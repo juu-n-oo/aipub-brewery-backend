@@ -15,6 +15,7 @@ public interface DockerfileMapper {
     List<DockerfileResponse> toResponseList(List<Dockerfile> dockerfiles);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "username", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "contextFiles", ignore = true)
