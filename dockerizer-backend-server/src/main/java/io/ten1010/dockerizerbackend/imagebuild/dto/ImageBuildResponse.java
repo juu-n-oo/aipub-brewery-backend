@@ -25,6 +25,9 @@ public class ImageBuildResponse {
     @Schema(description = "대상 이미지 (tag 포함)", example = "harbor.aipub.io/pjw/my-pytorch:v1.0")
     private String targetImage;
 
+    @Schema(description = "베이스 이미지 (Dockerfile FROM)", example = "aipub-harbor.cluster7.idc1.ten1010.io/aipub/python:3.11")
+    private String baseImage;
+
     @Schema(description = "상태 메시지", example = "Kaniko job created, building image")
     private String message;
 

@@ -39,6 +39,8 @@ public class ImageBuildService {
 
     private static final String LABEL_DOCKERFILE_ID = "dockerizer.aipub.ten1010.io/dockerfile-id";
     private static final String LABEL_USERNAME = "dockerizer.aipub.ten1010.io/username";
+    // base image 는 registry/repo:tag 형태라 label 값 제약(63자, '/' ':' 불가)에 맞지 않아 annotation 으로 저장
+    private static final String ANNOTATION_BASE_IMAGE = "dockerizer.aipub.ten1010.io/base-image";
 
     private final DockerfileRepository dockerfileRepository;
     private final DockerfileValidator dockerfileValidator;
@@ -67,6 +69,9 @@ public class ImageBuildService {
                         "labels", Map.of(
                                 LABEL_DOCKERFILE_ID, String.valueOf(dockerfile.getId()),
                                 LABEL_USERNAME, dockerfile.getUsername()
+                        ),
+                        "annotations", Map.of(
+                                ANNOTATION_BASE_IMAGE, dockerfile.getBaseImage()
                         )
                 ))
                 .spec(ImageBuildSpec.builder()
@@ -93,6 +98,7 @@ public class ImageBuildService {
                     .namespace(namespace)
                     .phase(ImageBuildConstants.PHASE_PENDING)
                     .targetImage(fullImage)
+                    .baseImage(dockerfile.getBaseImage())
                     .message("ImageBuild CR created successfully")
                     .dockerfileId(dockerfile.getId())
                     .username(dockerfile.getUsername())
@@ -201,6 +207,7 @@ public class ImageBuildService {
     private ImageBuildResponse crMapToResponse(Map<String, Object> crMap) {
         Map<String, Object> metadata = (Map<String, Object>) crMap.get("metadata");
         Map<String, String> labels = (Map<String, String>) metadata.getOrDefault("labels", Map.of());
+        Map<String, String> annotations = (Map<String, String>) metadata.getOrDefault("annotations", Map.of());
         ImageBuildStatus status = parseStatus(crMap);
         ImageBuildSpec spec = parseSpec(crMap);
 
@@ -213,6 +220,7 @@ public class ImageBuildService {
                 .namespace(namespace)
                 .phase(status.getPhase() != null ? status.getPhase() : ImageBuildConstants.PHASE_PENDING)
                 .targetImage(spec.getTargetImage())
+                .baseImage(annotations.get(ANNOTATION_BASE_IMAGE))
                 .message(status.getMessage())
                 .imageDigest(status.getImageDigest())
                 .dockerfileId(parseLong(labels.get(LABEL_DOCKERFILE_ID)))
