@@ -24,4 +24,7 @@ public class DockerfileUpdateRequest {
     @Schema(description = "Base 이미지 (FROM 대상)", example = "aipub-harbor.cluster7.idc1.ten1010.io/aipub/python:3.11")
     private String baseImage;
 
+    @Schema(description = "리비전 메시지 (선택, 미입력 시 기본 메시지)", example = "CUDA 버전 업그레이드")
+    private String message;
+
 }

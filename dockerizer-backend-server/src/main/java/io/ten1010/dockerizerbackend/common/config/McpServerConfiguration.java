@@ -70,7 +70,7 @@ public class McpServerConfiguration {
             DockerfileUpdateRequest request = new DockerfileUpdateRequest();
             request.setContent(content);
             request.setBaseImage(baseImage);
-            return service.update(id, request);
+            return service.update(id, request, "mcp-tool");
         }
 
         @Tool(description = "Dockerfile을 삭제한다.")

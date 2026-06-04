@@ -37,6 +37,9 @@ public class ImageBuildResponse {
     @Schema(description = "빌드에 사용된 Dockerfile ID", example = "1")
     private Long dockerfileId;
 
+    @Schema(description = "빌드에 사용된 Dockerfile 리비전 ID", example = "42")
+    private Long dockerfileRevisionId;
+
     @Schema(description = "빌드를 실행한 사용자", example = "joonwoo")
     private String username;
 

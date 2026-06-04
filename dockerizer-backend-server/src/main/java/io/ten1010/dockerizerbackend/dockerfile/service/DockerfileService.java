@@ -6,7 +6,9 @@ import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileMapper;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileResponse;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileUpdateRequest;
 import io.ten1010.dockerizerbackend.dockerfile.entity.Dockerfile;
+import io.ten1010.dockerizerbackend.dockerfile.entity.DockerfileRevision;
 import io.ten1010.dockerizerbackend.dockerfile.repository.DockerfileRepository;
+import io.ten1010.dockerizerbackend.dockerfile.repository.DockerfileRevisionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,7 @@ import java.util.List;
 public class DockerfileService {
 
     private final DockerfileRepository repository;
+    private final DockerfileRevisionRepository revisionRepository;
     private final DockerfileMapper mapper;
     private final DockerfileValidator validator;
 
@@ -27,6 +30,19 @@ public class DockerfileService {
         validator.validate(request.getContent());
         Dockerfile entity = mapper.toEntity(request);
         entity.setUsername(username);
+        entity = repository.save(entity);
+
+        DockerfileRevision revision = DockerfileRevision.builder()
+                .dockerfile(entity)
+                .version(1)
+                .content(request.getContent())
+                .baseImage(request.getBaseImage())
+                .message("Initial version")
+                .createdBy(username)
+                .build();
+        revision = revisionRepository.save(revision);
+
+        entity.setLatestRevision(revision);
         return mapper.toResponse(repository.save(entity));
     }
 
@@ -43,9 +59,10 @@ public class DockerfileService {
     }
 
     @Transactional
-    public DockerfileResponse update(Long id, DockerfileUpdateRequest request) {
+    public DockerfileResponse update(Long id, DockerfileUpdateRequest request, String username) {
         validator.validate(request.getContent());
         Dockerfile entity = findById(id);
+
         if (request.getName() != null && !request.getName().isBlank()) {
             entity.setName(request.getName());
         }
@@ -54,6 +71,22 @@ public class DockerfileService {
         }
         entity.setContent(request.getContent());
         entity.setBaseImage(request.getBaseImage());
+
+        int nextVersion = revisionRepository.findTopByDockerfileIdOrderByVersionDesc(id)
+                .map(r -> r.getVersion() + 1)
+                .orElse(1);
+
+        DockerfileRevision revision = DockerfileRevision.builder()
+                .dockerfile(entity)
+                .version(nextVersion)
+                .content(request.getContent())
+                .baseImage(request.getBaseImage())
+                .message(request.getMessage())
+                .createdBy(username)
+                .build();
+        revision = revisionRepository.save(revision);
+
+        entity.setLatestRevision(revision);
         return mapper.toResponse(repository.save(entity));
     }
 

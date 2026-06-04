@@ -41,6 +41,12 @@ public class DockerfileResponse {
     @Schema(description = "수정 시각", example = "2026-04-18T00:00:00Z")
     private Instant updatedAt;
 
+    @Schema(description = "최신 리비전 버전 번호", example = "3")
+    private Integer latestVersion;
+
+    @Schema(description = "최신 리비전 ID", example = "42")
+    private Long latestRevisionId;
+
     @Schema(description = "빌드 컨텍스트 파일 목록")
     private List<BuildContextFileResponse> contextFiles;
 

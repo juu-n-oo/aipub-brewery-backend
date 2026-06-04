@@ -38,6 +38,7 @@ import java.util.concurrent.Executors;
 public class ImageBuildService {
 
     private static final String LABEL_DOCKERFILE_ID = "dockerizer.aipub.ten1010.io/dockerfile-id";
+    private static final String LABEL_REVISION_ID = "dockerizer.aipub.ten1010.io/dockerfile-revision-id";
     private static final String LABEL_USERNAME = "dockerizer.aipub.ten1010.io/username";
     // base image 는 registry/repo:tag 형태라 label 값 제약(63자, '/' ':' 불가)에 맞지 않아 annotation 으로 저장
     private static final String ANNOTATION_BASE_IMAGE = "dockerizer.aipub.ten1010.io/base-image";
@@ -68,6 +69,7 @@ public class ImageBuildService {
                         "namespace", namespace,
                         "labels", Map.of(
                                 LABEL_DOCKERFILE_ID, String.valueOf(dockerfile.getId()),
+                                LABEL_REVISION_ID, String.valueOf(dockerfile.getLatestRevision() != null ? dockerfile.getLatestRevision().getId() : 0),
                                 LABEL_USERNAME, dockerfile.getUsername()
                         ),
                         "annotations", Map.of(
@@ -101,6 +103,7 @@ public class ImageBuildService {
                     .baseImage(dockerfile.getBaseImage())
                     .message("ImageBuild CR created successfully")
                     .dockerfileId(dockerfile.getId())
+                    .dockerfileRevisionId(dockerfile.getLatestRevision() != null ? dockerfile.getLatestRevision().getId() : null)
                     .username(dockerfile.getUsername())
                     .createdAt(Instant.now())
                     .build();
@@ -224,6 +227,7 @@ public class ImageBuildService {
                 .message(status.getMessage())
                 .imageDigest(status.getImageDigest())
                 .dockerfileId(parseLong(labels.get(LABEL_DOCKERFILE_ID)))
+                .dockerfileRevisionId(parseLong(labels.get(LABEL_REVISION_ID)))
                 .username(labels.get(LABEL_USERNAME))
                 .createdAt(parseInstant(creationTimestamp))
                 .startTime(parseInstant(status.getStartTime()))

@@ -43,6 +43,10 @@ public class Dockerfile {
     @Column(name = "base_image", length = 512, nullable = false)
     private String baseImage;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "latest_revision_id")
+    private DockerfileRevision latestRevision;
+
     @OneToMany(mappedBy = "dockerfile", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<BuildContextFile> contextFiles = new ArrayList<>();
