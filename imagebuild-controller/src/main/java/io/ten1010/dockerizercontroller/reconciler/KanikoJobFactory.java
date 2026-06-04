@@ -75,9 +75,10 @@ public class KanikoJobFactory {
         List<V1VolumeMount> mounts = new ArrayList<>();
 
         if (hasBuildContext) {
-            // PVC is the build context at /workspace; Dockerfile is mounted separately
+            // PVC is the build context at /build-context (read-only);
+            // /workspace is reserved for Kaniko's image layer writes
             args.add("--dockerfile=/kaniko-config/Dockerfile");
-            args.add("--context=dir:///workspace");
+            args.add("--context=dir:///build-context");
 
             mounts.add(new V1VolumeMount()
                     .name(DOCKERFILE_VOLUME)
@@ -85,7 +86,7 @@ public class KanikoJobFactory {
 
             V1VolumeMount contextMount = new V1VolumeMount()
                     .name(BUILD_CONTEXT_VOLUME)
-                    .mountPath("/workspace");
+                    .mountPath("/build-context");
             String subPath = cr.getSpec().getBuildContextSubPath();
             if (subPath != null && !subPath.isBlank()) {
                 // Strip leading slash for k8s subPath
