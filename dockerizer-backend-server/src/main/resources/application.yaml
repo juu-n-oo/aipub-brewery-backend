@@ -49,6 +49,7 @@ dockerizer:
   volume:
     client-mode: K8S  # K8S: Kubernetes API 직접 사용, PROXY: AIPub k8s proxy 경유
     proxy-base-url: https://aipub.cluster7.idc1.ten1010.io
+    pvc-mount-path: /data  # AIPubVolume Pod 내 PVC 마운트 경로 (브라우저가 이 경로를 PVC 루트로 취급)
   registry:
     ngc:
       enabled: true

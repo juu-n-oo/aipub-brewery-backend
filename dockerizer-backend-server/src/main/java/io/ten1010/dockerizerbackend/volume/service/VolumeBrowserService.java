@@ -6,6 +6,7 @@ import io.kubernetes.client.util.WebSocketStreamHandler;
 import io.kubernetes.client.util.WebSockets;
 import io.ten1010.dockerizerbackend.common.exception.ResourceNotFoundException;
 import io.ten1010.dockerizerbackend.volume.client.AipubVolumeClient;
+import io.ten1010.dockerizerbackend.volume.client.VolumeProperties;
 import io.ten1010.dockerizerbackend.volume.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +25,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class VolumeBrowserService {
 
-    private static final String ROOT_PATH = "/";
-
     private final AipubVolumeClient volumeClient;
+    private final VolumeProperties volumeProperties;
     private final ApiClient apiClient;
 
     public VolumeListResponse listVolumes(String namespace) {
@@ -39,8 +39,13 @@ public class VolumeBrowserService {
 
         VolumeInfo volumeInfo = volumeClient.getVolume(namespace, volumeName);
         String podName = volumeInfo.getPvcName();
+        String pvcMountPath = volumeProperties.getPvcMountPath();
 
-        String fullPath = normalizePath(path);
+        // User path is relative to PVC root; actual path = mountPath + userPath
+        String userPath = normalizePath(path);
+        String fullPath = "/".equals(userPath)
+                ? pvcMountPath
+                : pvcMountPath + userPath;
         List<FileEntry> entries = execListFiles(namespace, podName, fullPath);
 
         return BrowseResponse.builder()

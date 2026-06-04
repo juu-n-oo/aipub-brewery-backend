@@ -23,4 +23,10 @@ public class VolumeProperties {
      */
     private String proxyBaseUrl = "https://aipub.cluster7.idc1.ten1010.io";
 
+    /**
+     * AIPubVolume Pod 내 PVC 마운트 경로.
+     * 파일 브라우저가 이 경로를 PVC 루트(/)로 취급한다.
+     */
+    private String pvcMountPath = "/data";
+
 }
