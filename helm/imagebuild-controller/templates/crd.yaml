@@ -57,6 +57,12 @@ spec:
                 pushSecretRef:
                   type: string
                   description: Name of the Secret containing registry push credentials
+                buildContextPvc:
+                  type: string
+                  description: Name of PersistentVolumeClaim to use as build context (required for COPY/ADD commands)
+                buildContextSubPath:
+                  type: string
+                  description: Sub-path within the PVC to use as build context root (optional, defaults to PVC root)
             status:
               type: object
               properties:
