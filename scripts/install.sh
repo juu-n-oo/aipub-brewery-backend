@@ -414,6 +414,15 @@ patch_aipub_ingress() {
         return 0
     fi
 
+    local existing_paths
+    existing_paths=$(sudo kubectl get ingress -n ${NAMESPACE} ${AIPUB_INGRESS_NAME} \
+        -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>/dev/null)
+
+    if echo "${existing_paths}" | grep -q "/api/v1alpha1/dockerfiles"; then
+        log_info "Dockerizer paths already present in AIPub Ingress, skipping patch"
+        return 0
+    fi
+
     local backup_dir="${BACKUP_BASE_DIR}/aipub-ingress"
     mkdir -p "${backup_dir}"
 
