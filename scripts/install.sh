@@ -173,6 +173,16 @@ deploy_helm_chart() {
     if [ $? -eq 0 ]; then
         log_success "${chart_name} deployed successfully"
 
+        if [ "$is_upgrade" = true ]; then
+            log_info "Restarting workloads for existing release ${chart_name}..."
+            if sudo kubectl rollout restart deployment -n ${NAMESPACE} -l "app.kubernetes.io/instance=${chart_name}"; then
+                sudo kubectl rollout status deployment -n ${NAMESPACE} -l "app.kubernetes.io/instance=${chart_name}" --timeout=300s || true
+                log_success "${chart_name} workloads restarted"
+            else
+                log_warn "No matching workloads to restart for ${chart_name}"
+            fi
+        fi
+
         sudo helm get manifest -n ${NAMESPACE} ${chart_name} > "${after_file}"
         sudo helm get values -n ${NAMESPACE} ${chart_name} > "${backup_dir}/values-after.yaml"
 
