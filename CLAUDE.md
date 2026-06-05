@@ -169,7 +169,7 @@ AIPub 플랫폼 내에 **웹 기반 Dockerfile 편집 및 이미지 빌드/관�
 ### 6.2 MVP 범위 제외 항목 (명시적 Out-of-Scope)
 
 - **빌드 컨텍스트 파일 전달 (COPY / ADD)**: 로컬 파일을 이미지에 포함하는 플로우는 MVP에서 지원하지 않음. (requirements.txt, 소스코드 COPY 등 포함 → 고도화 범위)
-- Dockerfile 버전 관리(히스토리, diff, 롤백)
+- ~~Dockerfile 버전 관리(히스토리, diff, 롤백)~~ → ✅ **MVP 이후 구현 완료** (v1.2.0: append-only 리비전 + diff + 롤백). [docs/dockerfile-revision-versioning.html](../docs/dockerfile-revision-versioning.html)
 - 템플릿 라이브러리, Quick Build Wizard, Lint
 - 외부 레지스트리(NGC 등) 연동
 - 빌드 캐시 최적화, 빌드 큐/쿼터
@@ -193,7 +193,7 @@ AIPub 플랫폼 내에 **웹 기반 Dockerfile 편집 및 이미지 빌드/관�
 
 ### 7.1 Dockerfile 관리 고도화
 
-- **Dockerfile 버전 관리 (Git-like)**: 수정 이력 커밋, diff, 롤백.
+- **Dockerfile 버전 관리 (Git-like)**: 수정 이력 커밋, diff, 롤백. — ✅ **구현 완료** (v1.2.0). [docs/dockerfile-revision-versioning.html](../docs/dockerfile-revision-versioning.html)
 - **Dockerfile 템플릿 라이브러리**: `PyTorch + CUDA`, `TensorFlow`, `JupyterLab + GPU`, `HuggingFace`, `vLLM` 등 ML 특화 템플릿. 사내 템플릿 등록 지원.
 - **Fork / Clone**: 팀원의 Dockerfile 또는 사내 템플릿을 복제하여 시작점으로 활용.
 - **Lint & Best Practice 검증**: Hadolint 연동, ML 특화 룰(CUDA-torch 호환성 등).

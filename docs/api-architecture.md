@@ -65,11 +65,21 @@ authenticated: 나머지 모든 요청
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| POST | `/dockerfiles` | 생성 (forbidden instructions 검증) |
+| POST | `/dockerfiles` | 생성 (forbidden instructions 검증, 리비전 v1 생성) |
 | GET | `/dockerfiles?project=&username=` | 목록 |
 | GET | `/dockerfiles/{id}` | 단건 |
-| PUT | `/dockerfiles/{id}` | 수정 |
+| PUT | `/dockerfiles/{id}` | 수정 (저장 시 새 리비전 append) |
 | DELETE | `/dockerfiles/{id}` | 삭제 |
+
+### Dockerfile Revision (`/dockerfiles/{id}/revisions`)
+
+매 저장마다 `dockerfile_revisions`에 append-only 로 버전이 쌓인다. 이력 조회 · diff · 롤백 지원.
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/dockerfiles/{id}/revisions` | 리비전(버전) 목록 |
+| GET | `/dockerfiles/{id}/revisions/{version}` | 특정 리비전 단건 (content/baseImage 포함) |
+| POST | `/dockerfiles/{id}/revisions/{version}/rollback` | 해당 리비전 내용으로 롤백 (새 리비전으로 append) |
 
 ### Build Context Files (`/dockerfiles/{dockerfileId}/files`)
 
