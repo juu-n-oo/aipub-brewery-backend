@@ -104,7 +104,8 @@ authenticated: 나머지 모든 요청
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
 | GET | `/volumes/{namespace}` | AIPubVolume 목록 |
-| GET | `/volumes/{namespace}/{volumeName}/browse?path=` | 볼륨 파일 탐색 |
+| GET | `/volumes/{namespace}/{volumeName}/browse?path=` | 볼륨 파일 탐색 (helper Pod `exec ls`) |
+| POST | `/volumes/{namespace}/{volumeName}/upload?path=` | 볼륨 지정 경로에 파일 업로드 (multipart). PVC 를 RW 로 마운트한 helper Pod 에 `exec dd of=<경로>` 로 multipart 스트림을 그대로 기록(로컬 디스크 미경유). 응답으로 갱신된 디렉토리 목록 반환 |
 
 ### Registry (`/registries`)
 
@@ -122,7 +123,7 @@ authenticated: 나머지 모든 요청
 | ImageBuild CR | `dockerizer.aipub.ten1010.io/v1alpha1` | 빌드 CR 생성/조회 |
 | AIPubVolume CR | `aipub.ten1010.io/v1alpha1` | 볼륨 목록 조회 |
 | Pod / Pod/log | `core/v1` | 빌드 Pod 상태/로그 조회 |
-| Pod/exec | `core/v1` | 볼륨 파일 탐색 (helper Pod exec) |
+| Pod/exec | `core/v1` | 볼륨 파일 탐색 (`ls`) 및 업로드 (`dd`, stdin 스트림) — helper Pod exec |
 
 ## 5. 설정
 

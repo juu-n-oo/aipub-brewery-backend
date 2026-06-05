@@ -7,7 +7,9 @@ import io.ten1010.dockerizerbackend.volume.dto.BrowseResponse;
 import io.ten1010.dockerizerbackend.volume.dto.VolumeListResponse;
 import io.ten1010.dockerizerbackend.volume.service.VolumeBrowserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1alpha1/volumes")
@@ -31,6 +33,17 @@ public class VolumeController {
             @Parameter(description = "AIPubVolume 이름") @PathVariable String volumeName,
             @Parameter(description = "조회할 경로 (기본: /)", example = "/models") @RequestParam(defaultValue = "/") String path) {
         return service.browse(namespace, volumeName, path);
+    }
+
+    @PostMapping(value = "/{namespace}/{volumeName}/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Volume 파일 업로드", description = "AIPubVolume PVC 의 지정 경로(path)에 파일을 업로드한다. " +
+            "helper Pod 에 exec(dd) 로 multipart 스트림을 그대로 기록하며, 응답으로 해당 경로의 갱신된 목록을 반환한다.")
+    public BrowseResponse upload(
+            @Parameter(description = "프로젝트 namespace") @PathVariable String namespace,
+            @Parameter(description = "AIPubVolume 이름") @PathVariable String volumeName,
+            @Parameter(description = "업로드 대상 디렉토리 (기본: /)", example = "/models") @RequestParam(defaultValue = "/") String path,
+            @Parameter(description = "업로드할 파일") @RequestPart("file") MultipartFile file) {
+        return service.upload(namespace, volumeName, path, file);
     }
 
 }

@@ -4,7 +4,9 @@ import io.ten1010.dockerizerbackend.common.exception.ForbiddenInstructionExcepti
 import io.ten1010.dockerizerbackend.common.exception.ResourceNotFoundException;
 import io.ten1010.dockerizerbackend.dockerfile.dto.*;
 import io.ten1010.dockerizerbackend.dockerfile.entity.Dockerfile;
+import io.ten1010.dockerizerbackend.dockerfile.entity.DockerfileRevision;
 import io.ten1010.dockerizerbackend.dockerfile.repository.DockerfileRepository;
+import io.ten1010.dockerizerbackend.dockerfile.repository.DockerfileRevisionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -12,7 +14,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +30,9 @@ class DockerfileServiceTest {
 
     @Mock
     private DockerfileRepository repository;
+
+    @Mock
+    private DockerfileRevisionRepository revisionRepository;
 
     @Mock
     private DockerfileMapper mapper;
@@ -48,7 +52,6 @@ class DockerfileServiceTest {
                 .description("PyTorch 2.1 기반 학습 환경")
                 .content("FROM pytorch/pytorch:2.1.0\nRUN pip install transformers")
                 .baseImage("pytorch/pytorch:2.1.0")
-                .contextFiles(new ArrayList<>())
                 .createdAt(Instant.parse("2026-04-18T00:00:00Z"))
                 .updatedAt(Instant.parse("2026-04-18T00:00:00Z"))
                 .build();
@@ -63,7 +66,6 @@ class DockerfileServiceTest {
                 .description("PyTorch 2.1 기반 학습 환경")
                 .content("FROM pytorch/pytorch:2.1.0\nRUN pip install transformers")
                 .baseImage("pytorch/pytorch:2.1.0")
-                .contextFiles(List.of())
                 .createdAt(Instant.parse("2026-04-18T00:00:00Z"))
                 .updatedAt(Instant.parse("2026-04-18T00:00:00Z"))
                 .build();
@@ -73,7 +75,6 @@ class DockerfileServiceTest {
     void createValidDockerfile() {
         DockerfileCreateRequest request = new DockerfileCreateRequest();
         request.setProject("pjw");
-        request.setUsername("joonwoo");
         request.setName("pytorch-cuda12");
         request.setContent("FROM pytorch/pytorch:2.1.0\nRUN pip install transformers");
         request.setBaseImage("pytorch/pytorch:2.1.0");
@@ -82,13 +83,13 @@ class DockerfileServiceTest {
         willDoNothing().given(validator).validate(any());
         given(mapper.toEntity(request)).willReturn(entity);
         given(repository.save(entity)).willReturn(entity);
+        given(revisionRepository.save(any())).willReturn(DockerfileRevision.builder().id(1L).version(1).build());
         given(mapper.toResponse(entity)).willReturn(sampleResponse());
 
-        DockerfileResponse result = service.create(request);
+        DockerfileResponse result = service.create(request, "joonwoo");
 
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getProject()).isEqualTo("pjw");
-        assertThat(result.getContextFiles()).isEmpty();
         verify(validator).validate(request.getContent());
     }
 
@@ -100,7 +101,7 @@ class DockerfileServiceTest {
         willThrow(new ForbiddenInstructionException(List.of("ADD")))
                 .given(validator).validate(any());
 
-        assertThatThrownBy(() -> service.create(request))
+        assertThatThrownBy(() -> service.create(request, "joonwoo"))
                 .isInstanceOf(ForbiddenInstructionException.class);
     }
 
@@ -113,7 +114,6 @@ class DockerfileServiceTest {
         DockerfileResponse result = service.getById(1L);
 
         assertThat(result.getId()).isEqualTo(1L);
-        assertThat(result.getContextFiles()).isEmpty();
     }
 
     @Test
@@ -149,10 +149,12 @@ class DockerfileServiceTest {
 
         willDoNothing().given(validator).validate(any());
         given(repository.findById(1L)).willReturn(Optional.of(entity));
+        given(revisionRepository.findTopByDockerfileIdOrderByVersionDesc(1L)).willReturn(Optional.empty());
+        given(revisionRepository.save(any())).willReturn(DockerfileRevision.builder().id(2L).version(1).build());
         given(repository.save(entity)).willReturn(entity);
         given(mapper.toResponse(entity)).willReturn(sampleResponse());
 
-        DockerfileResponse result = service.update(1L, request);
+        DockerfileResponse result = service.update(1L, request, "joonwoo");
 
         assertThat(result).isNotNull();
         assertThat(entity.getName()).isEqualTo("pytorch-cuda12-v2");

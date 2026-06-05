@@ -1,6 +1,5 @@
 package io.ten1010.dockerizerbackend.dockerfile.dto;
 
-import io.ten1010.dockerizerbackend.dockerfile.entity.BuildContextFile;
 import io.ten1010.dockerizerbackend.dockerfile.entity.Dockerfile;
 import io.ten1010.dockerizerbackend.dockerfile.entity.DockerfileRevision;
 import org.mapstruct.Mapper;
@@ -21,7 +20,6 @@ public interface DockerfileMapper {
     @Mapping(target = "username", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "contextFiles", ignore = true)
     @Mapping(target = "latestRevision", ignore = true)
     Dockerfile toEntity(DockerfileCreateRequest request);
 
@@ -29,9 +27,5 @@ public interface DockerfileMapper {
     DockerfileRevisionResponse toRevisionResponse(DockerfileRevision revision);
 
     List<DockerfileRevisionResponse> toRevisionResponseList(List<DockerfileRevision> revisions);
-
-    BuildContextFileResponse toFileResponse(BuildContextFile file);
-
-    List<BuildContextFileResponse> toFileResponseList(List<BuildContextFile> files);
 
 }

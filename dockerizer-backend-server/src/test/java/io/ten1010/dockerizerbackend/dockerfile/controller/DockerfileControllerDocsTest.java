@@ -2,10 +2,10 @@ package io.ten1010.dockerizerbackend.dockerfile.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.ten1010.dockerizerbackend.aipub.filter.AipubAuthenticationFilter;
-import io.ten1010.dockerizerbackend.dockerfile.dto.BuildContextFileResponse;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileCreateRequest;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileResponse;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileUpdateRequest;
+import io.ten1010.dockerizerbackend.dockerfile.service.DockerfileRevisionService;
 import io.ten1010.dockerizerbackend.dockerfile.service.DockerfileService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +15,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -49,6 +50,9 @@ class DockerfileControllerDocsTest {
     @MockitoBean
     private DockerfileService service;
 
+    @MockitoBean
+    private DockerfileRevisionService revisionService;
+
     @BeforeEach
     void setUp(WebApplicationContext context, RestDocumentationContextProvider restDocs) {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(context)
@@ -67,15 +71,6 @@ class DockerfileControllerDocsTest {
                 .baseImage("pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime")
                 .createdAt(Instant.parse("2026-04-18T00:00:00Z"))
                 .updatedAt(Instant.parse("2026-04-18T00:00:00Z"))
-                .contextFiles(List.of(
-                        BuildContextFileResponse.builder()
-                                .id(1L)
-                                .fileName("requirements.txt")
-                                .targetPath("requirements.txt")
-                                .fileSize(256L)
-                                .uploadedAt(Instant.parse("2026-04-18T00:00:00Z"))
-                                .build()
-                ))
                 .build();
     }
 
@@ -90,23 +85,22 @@ class DockerfileControllerDocsTest {
                 .baseImage("pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime")
                 .createdAt(Instant.parse("2026-04-18T00:00:00Z"))
                 .updatedAt(Instant.parse("2026-04-18T00:00:00Z"))
-                .contextFiles(List.of())
                 .build();
     }
 
     @Test
     void createDockerfile() throws Exception {
-        given(service.create(any())).willReturn(sampleResponseWithoutFiles());
+        given(service.create(any(), any())).willReturn(sampleResponseWithoutFiles());
 
         DockerfileCreateRequest request = new DockerfileCreateRequest();
         request.setProject("pjw");
-        request.setUsername("joonwoo");
         request.setName("simple-pytorch");
         request.setDescription(null);
         request.setContent("FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime\nRUN pip install transformers");
         request.setBaseImage("pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime");
 
         mockMvc.perform(post("/api/v1alpha1/dockerfiles")
+                        .principal(new UsernamePasswordAuthenticationToken("joonwoo", null))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -115,7 +109,6 @@ class DockerfileControllerDocsTest {
                         preprocessResponse(prettyPrint()),
                         requestFields(
                                 fieldWithPath("project").description("프로젝트 이름 (namespace)"),
-                                fieldWithPath("username").description("소유자 사용자 이름"),
                                 fieldWithPath("name").description("Dockerfile 이름"),
                                 fieldWithPath("description").description("설명 (선택)").optional(),
                                 fieldWithPath("content").description("Dockerfile 내용"),
@@ -131,7 +124,8 @@ class DockerfileControllerDocsTest {
                                 fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)"),
                                 fieldWithPath("createdAt").description("생성 시각"),
                                 fieldWithPath("updatedAt").description("수정 시각"),
-                                fieldWithPath("contextFiles").description("빌드 컨텍스트 파일 목록")
+                                fieldWithPath("latestVersion").description("최신 리비전 버전 번호").optional(),
+                                fieldWithPath("latestRevisionId").description("최신 리비전 ID").optional()
                         )));
     }
 
@@ -156,12 +150,8 @@ class DockerfileControllerDocsTest {
                                 fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)"),
                                 fieldWithPath("createdAt").description("생성 시각"),
                                 fieldWithPath("updatedAt").description("수정 시각"),
-                                fieldWithPath("contextFiles").description("빌드 컨텍스트 파일 목록"),
-                                fieldWithPath("contextFiles[].id").description("파일 ID"),
-                                fieldWithPath("contextFiles[].fileName").description("원본 파일 이름"),
-                                fieldWithPath("contextFiles[].targetPath").description("빌드 컨텍스트 내 경로"),
-                                fieldWithPath("contextFiles[].fileSize").description("파일 크기 (bytes)"),
-                                fieldWithPath("contextFiles[].uploadedAt").description("업로드 시각")
+                                fieldWithPath("latestVersion").description("최신 리비전 버전 번호").optional(),
+                                fieldWithPath("latestRevisionId").description("최신 리비전 ID").optional()
                         )));
     }
 
@@ -188,18 +178,14 @@ class DockerfileControllerDocsTest {
                                 fieldWithPath("[].baseImage").description("Base 이미지 (FROM 대상)"),
                                 fieldWithPath("[].createdAt").description("생성 시각"),
                                 fieldWithPath("[].updatedAt").description("수정 시각"),
-                                fieldWithPath("[].contextFiles").description("빌드 컨텍스트 파일 목록"),
-                                fieldWithPath("[].contextFiles[].id").description("파일 ID").optional(),
-                                fieldWithPath("[].contextFiles[].fileName").description("원본 파일 이름").optional(),
-                                fieldWithPath("[].contextFiles[].targetPath").description("빌드 컨텍스트 내 경로").optional(),
-                                fieldWithPath("[].contextFiles[].fileSize").description("파일 크기 (bytes)").optional(),
-                                fieldWithPath("[].contextFiles[].uploadedAt").description("업로드 시각").optional()
+                                fieldWithPath("[].latestVersion").description("최신 리비전 버전 번호").optional(),
+                                fieldWithPath("[].latestRevisionId").description("최신 리비전 ID").optional()
                         )));
     }
 
     @Test
     void updateDockerfile() throws Exception {
-        given(service.update(eq(1L), any())).willReturn(sampleResponse());
+        given(service.update(eq(1L), any(), any())).willReturn(sampleResponse());
 
         DockerfileUpdateRequest request = new DockerfileUpdateRequest();
         request.setName("pytorch-cuda12-v2");
@@ -208,6 +194,7 @@ class DockerfileControllerDocsTest {
         request.setBaseImage("pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime");
 
         mockMvc.perform(put("/api/v1alpha1/dockerfiles/{id}", 1L)
+                        .principal(new UsernamePasswordAuthenticationToken("joonwoo", null))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -221,7 +208,8 @@ class DockerfileControllerDocsTest {
                                 fieldWithPath("name").description("Dockerfile 이름 (선택, 미입력 시 변경 안 함)").optional(),
                                 fieldWithPath("description").description("설명 (선택)").optional(),
                                 fieldWithPath("content").description("수정할 Dockerfile 내용"),
-                                fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)")
+                                fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)"),
+                                fieldWithPath("message").description("리비전 메시지 (선택)").optional()
                         ),
                         responseFields(
                                 fieldWithPath("id").description("Dockerfile ID"),
@@ -233,12 +221,8 @@ class DockerfileControllerDocsTest {
                                 fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)"),
                                 fieldWithPath("createdAt").description("생성 시각"),
                                 fieldWithPath("updatedAt").description("수정 시각"),
-                                fieldWithPath("contextFiles").description("빌드 컨텍스트 파일 목록"),
-                                fieldWithPath("contextFiles[].id").description("파일 ID"),
-                                fieldWithPath("contextFiles[].fileName").description("원본 파일 이름"),
-                                fieldWithPath("contextFiles[].targetPath").description("빌드 컨텍스트 내 경로"),
-                                fieldWithPath("contextFiles[].fileSize").description("파일 크기 (bytes)"),
-                                fieldWithPath("contextFiles[].uploadedAt").description("업로드 시각")
+                                fieldWithPath("latestVersion").description("최신 리비전 버전 번호").optional(),
+                                fieldWithPath("latestRevisionId").description("최신 리비전 ID").optional()
                         )));
     }
 

@@ -100,7 +100,9 @@ class ImageBuildControllerDocsTest {
                                 fieldWithPath("username").description("빌드를 실행한 사용자"),
                                 fieldWithPath("createdAt").description("빌드 요청 시각"),
                                 fieldWithPath("startTime").description("빌드 시작 시각").optional(),
-                                fieldWithPath("completionTime").description("빌드 완료 시각").optional()
+                                fieldWithPath("completionTime").description("빌드 완료 시각").optional(),
+                                fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)").optional(),
+                                fieldWithPath("dockerfileRevisionId").description("빌드에 사용된 Dockerfile 리비전 ID").optional()
                         )));
     }
 
@@ -140,7 +142,9 @@ class ImageBuildControllerDocsTest {
                                 fieldWithPath("username").description("빌드를 실행한 사용자"),
                                 fieldWithPath("createdAt").description("빌드 요청 시각"),
                                 fieldWithPath("startTime").description("빌드 시작 시각"),
-                                fieldWithPath("completionTime").description("빌드 완료 시각")
+                                fieldWithPath("completionTime").description("빌드 완료 시각"),
+                                fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)").optional(),
+                                fieldWithPath("dockerfileRevisionId").description("빌드에 사용된 Dockerfile 리비전 ID").optional()
                         )));
     }
 
@@ -193,7 +197,9 @@ class ImageBuildControllerDocsTest {
                                 fieldWithPath("[].username").description("빌드를 실행한 사용자"),
                                 fieldWithPath("[].createdAt").description("빌드 요청 시각"),
                                 fieldWithPath("[].startTime").description("빌드 시작 시각").optional(),
-                                fieldWithPath("[].completionTime").description("빌드 완료 시각").optional()
+                                fieldWithPath("[].completionTime").description("빌드 완료 시각").optional(),
+                                fieldWithPath("[].baseImage").description("Base 이미지 (FROM 대상)").optional(),
+                                fieldWithPath("[].dockerfileRevisionId").description("빌드에 사용된 Dockerfile 리비전 ID").optional()
                         )));
     }
 

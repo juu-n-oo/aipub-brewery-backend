@@ -1,5 +1,6 @@
 package io.ten1010.dockerizerbackend.volume.service;
 
+import io.kubernetes.client.Exec;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.util.WebSocketStreamHandler;
@@ -11,12 +12,15 @@ import io.ten1010.dockerizerbackend.volume.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -54,6 +58,106 @@ public class VolumeBrowserService {
                 .path(path)
                 .entries(entries)
                 .build();
+    }
+
+    /**
+     * 업로드한 파일을 AIPubVolume PVC 의 지정 경로에 기록한다.
+     * <p>
+     * k8sproxy 는 WebSocket(exec) 업그레이드를 지원하지 않으므로, 프론트는 dockerizer 백엔드의
+     * 이 엔드포인트로 multipart 를 보내고, 백엔드가 PVC 를 RW 로 마운트한 helper Pod 에
+     * {@code dd of=<경로>} 를 exec 하여 multipart 스트림을 그대로 stdin 으로 흘려보낸다.
+     * (로컬 디스크를 거치지 않는 패스스루.) 빌드 시에는 이 볼륨의 PVC 가 그대로 빌드 컨텍스트로
+     * 마운트되어 COPY 가 동작한다.
+     */
+    public BrowseResponse upload(String namespace, String volumeName, String path, MultipartFile file) {
+        validatePath(path);
+        String filename = resolveFilename(file.getOriginalFilename());
+
+        VolumeInfo volumeInfo = volumeClient.getVolume(namespace, volumeName);
+        String podName = volumeInfo.getPvcName();
+        String pvcMountPath = volumeProperties.getPvcMountPath();
+
+        String userPath = normalizePath(path);
+        String destDir = "/".equals(userPath) ? pvcMountPath : pvcMountPath + userPath;
+        // destDir 가 / 로 끝나면(루트 마운트) 중복 슬래시 방지
+        String fullPath = destDir.endsWith("/") ? destDir + filename : destDir + "/" + filename;
+
+        log.info("Uploading file [{}] ({} bytes) to volume {}/{} at {}",
+                filename, file.getSize(), namespace, volumeName, fullPath);
+
+        Process proc = null;
+        try {
+            Exec exec = new Exec(apiClient);
+            // 셸을 거치지 않고 인자로 직접 전달 → 경로/파일명 셸 인젝션 불가.
+            proc = exec.exec(
+                    namespace,
+                    podName,
+                    new String[]{"dd", "of=" + fullPath, "bs=65536"},
+                    podName,
+                    true,
+                    false);
+
+            // dd 는 전송 리포트를 stderr 로 출력한다. 별도 스레드로 비워 블로킹을 방지한다.
+            final Process running = proc;
+            Thread errDrain = new Thread(() -> {
+                try (BufferedReader r = new BufferedReader(
+                        new InputStreamReader(running.getErrorStream(), StandardCharsets.UTF_8))) {
+                    String err = r.lines().collect(Collectors.joining("\n"));
+                    if (!err.isBlank()) {
+                        log.debug("dd stderr for {}: {}", fullPath, err);
+                    }
+                } catch (Exception ignored) {
+                    // 드레인 실패는 업로드 결과에 영향 없음
+                }
+            }, "volume-upload-stderr");
+            errDrain.setDaemon(true);
+            errDrain.start();
+
+            // multipart → exec stdin 패스스루
+            try (InputStream in = file.getInputStream(); OutputStream out = proc.getOutputStream()) {
+                in.transferTo(out);
+            }
+            // stdout 은 비어있어야 하지만, 혹시 모를 데이터로 인한 파이프 블로킹 방지
+            try (InputStream stdout = proc.getInputStream()) {
+                stdout.readAllBytes();
+            } catch (Exception ignored) {
+                // 무시
+            }
+
+            int code = proc.waitFor();
+            errDrain.join(5000);
+            if (code != 0) {
+                throw new RuntimeException("File upload failed (dd exit code " + code + ")");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Upload interrupted", e);
+        } catch (Exception e) {
+            log.error("Failed to upload file to volume {}/{}: {}", namespace, volumeName, e.getMessage(), e);
+            throw new RuntimeException("Failed to upload file to volume", e);
+        } finally {
+            if (proc != null) {
+                proc.destroy();
+            }
+        }
+
+        // 업로드 직후의 디렉토리 목록을 반환하여 프론트가 바로 갱신할 수 있게 한다.
+        return browse(namespace, volumeName, path);
+    }
+
+    /**
+     * 업로드 파일명을 안전한 단일 파일명으로 정규화한다.
+     * 경로 구분자나 {@code ..} 를 포함하면 거부하여 디렉토리 이탈을 막는다.
+     */
+    private String resolveFilename(String original) {
+        if (original == null || original.isBlank()) {
+            throw new IllegalArgumentException("Uploaded file name is required");
+        }
+        String name = Path.of(original).getFileName().toString();
+        if (name.isBlank() || name.contains("..") || name.contains("/") || name.contains("\\")) {
+            throw new IllegalArgumentException("Invalid file name: " + original);
+        }
+        return name;
     }
 
     private List<FileEntry> execListFiles(String namespace, String podName, String fullPath) {

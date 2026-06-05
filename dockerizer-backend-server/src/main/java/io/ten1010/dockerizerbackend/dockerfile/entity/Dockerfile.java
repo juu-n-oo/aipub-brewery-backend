@@ -6,8 +6,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(
@@ -46,10 +44,6 @@ public class Dockerfile {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "latest_revision_id")
     private DockerfileRevision latestRevision;
-
-    @OneToMany(mappedBy = "dockerfile", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<BuildContextFile> contextFiles = new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

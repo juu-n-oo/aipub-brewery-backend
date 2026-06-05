@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import java.time.Instant;
-import java.util.List;
 
 @Getter
 @Setter
@@ -46,8 +45,5 @@ public class DockerfileResponse {
 
     @Schema(description = "최신 리비전 ID", example = "42")
     private Long latestRevisionId;
-
-    @Schema(description = "빌드 컨텍스트 파일 목록")
-    private List<BuildContextFileResponse> contextFiles;
 
 }
