@@ -50,12 +50,35 @@ public class DockerfileService {
         return mapper.toResponse(findById(id));
     }
 
+    /** 프로젝트별 전체 Dockerfile 조회 (MCP 툴 전용). */
     public List<DockerfileResponse> listByProject(String project) {
         return mapper.toResponseList(repository.findByProject(project));
     }
 
-    public List<DockerfileResponse> listByProjectAndUser(String project, String username) {
-        return mapper.toResponseList(repository.findByProjectAndUsername(project, username));
+    /**
+     * 멤버 조회: 바인딩된 프로젝트(들) 안의 "본인 소유" Dockerfile 만 생성 일시 최신순으로 반환한다.
+     * 프로젝트 IN + username 을 AND 로 묶으므로 삭제된 프로젝트의 Dockerfile 은 제외되고, 타인 것은 보이지 않는다.
+     *
+     * @param projects 프론트가 UserAuthority 로 구한 현재 바인딩 프로젝트 목록(삭제된 프로젝트 제외)
+     * @param username 토큰에서 추출한 호출자 본인 이름
+     */
+    public List<DockerfileResponse> listForUser(List<String> projects, String username) {
+        if (projects == null || projects.isEmpty()) {
+            return List.of();
+        }
+        return mapper.toResponseList(
+                repository.findByProjectInAndUsernameOrderByCreatedAtDesc(projects, username));
+    }
+
+    /**
+     * 관리자 전체 조회: 모든 Dockerfile 을 생성 일시 최신순으로 반환한다.
+     * usernameFilter 가 주어지면 해당 사용자 소유만 필터링한다.
+     */
+    public List<DockerfileResponse> listAll(String usernameFilter) {
+        List<Dockerfile> result = (usernameFilter == null || usernameFilter.isBlank())
+                ? repository.findAllByOrderByCreatedAtDesc()
+                : repository.findByUsernameOrderByCreatedAtDesc(usernameFilter);
+        return mapper.toResponseList(result);
     }
 
     @Transactional

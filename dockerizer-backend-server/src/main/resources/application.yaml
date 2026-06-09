@@ -43,6 +43,9 @@ springdoc:
 dockerizer:
   aipub:
     base-url: http://localhost:9090
+    # Dockerfile 전체 조회(all=true)를 허용할 관리자 role (selfsubjectreviews roles 와 대조)
+    admin-roles:
+      - aipub-admin
   kubernetes:
     verify-ssl: false
     kube-config:

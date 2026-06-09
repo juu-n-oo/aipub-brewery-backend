@@ -7,12 +7,15 @@ import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileCreateRequest;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileResponse;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileRevisionResponse;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileUpdateRequest;
+import io.ten1010.dockerizerbackend.aipub.config.AipubProperties;
+import io.ten1010.dockerizerbackend.common.exception.ForbiddenException;
 import io.ten1010.dockerizerbackend.dockerfile.service.DockerfileRevisionService;
 import io.ten1010.dockerizerbackend.dockerfile.service.DockerfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +28,7 @@ public class DockerfileController {
 
     private final DockerfileService service;
     private final DockerfileRevisionService revisionService;
+    private final AipubProperties aipubProperties;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -43,14 +47,43 @@ public class DockerfileController {
     }
 
     @GetMapping
-    @Operation(summary = "Dockerfile 목록 조회", description = "프로젝트별 또는 프로젝트+사용자별 Dockerfile 목록을 조회한다.")
+    @Operation(summary = "Dockerfile 목록 조회",
+            description = "멤버는 바인딩된 프로젝트 안의 본인 Dockerfile 만 조회한다(projects 파라미터). "
+                    + "관리자는 all=true 로 전체를 조회하며(생성 일시 최신순) username 으로 추가 필터링할 수 있다. "
+                    + "all=true 는 백엔드가 토큰 roles 로 관리자 여부를 검증하며, 비관리자가 호출하면 403 이다.")
     public List<DockerfileResponse> list(
-            @Parameter(description = "프로젝트 이름", required = true) @RequestParam String project,
-            @Parameter(description = "사용자 이름 (선택)") @RequestParam(required = false) String username) {
-        if (username != null) {
-            return service.listByProjectAndUser(project, username);
+            @Parameter(description = "바인딩된 프로젝트 목록(멤버 조회). 호출자 본인 소유로 자동 제한된다.")
+            @RequestParam(required = false) List<String> projects,
+            @Parameter(description = "username 필터(관리자 전용)")
+            @RequestParam(required = false) String username,
+            @Parameter(description = "전체 조회 여부(관리자 전용). true 면 모든 Dockerfile 을 최신순으로 조회")
+            @RequestParam(required = false, defaultValue = "false") boolean all,
+            Authentication authentication) {
+        String caller = authentication.getName();
+
+        if (all) {
+            // 전체 조회 경로는 반드시 백엔드에서 관리자 여부를 검증한다(프론트 분기 신뢰 금지).
+            // 인증 필터가 selfsubjectreviews 의 roles 를 SecurityContext 권한으로 넣어두므로 그 권한과 대조한다.
+            if (!isAdmin(authentication)) {
+                throw new ForbiddenException("Admin privilege required to list all dockerfiles");
+            }
+            return service.listAll(username);
         }
-        return service.listByProject(project);
+
+        // 멤버 경로: 프로젝트 IN + 토큰의 호출자 본인 이름 으로 묶어 조회한다.
+        // 임의의 projects 를 넘기더라도 username gate 때문에 본인 Dockerfile 만 반환되므로 안전하다.
+        return service.listForUser(projects, caller);
+    }
+
+    /** 토큰 roles(=SecurityContext 권한)에 설정된 관리자 role 이 하나라도 포함되면 관리자로 본다. */
+    private boolean isAdmin(Authentication authentication) {
+        List<String> adminRoles = aipubProperties.getAdminRoles();
+        if (adminRoles == null || adminRoles.isEmpty()) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(adminRoles::contains);
     }
 
     @PutMapping("/{id}")

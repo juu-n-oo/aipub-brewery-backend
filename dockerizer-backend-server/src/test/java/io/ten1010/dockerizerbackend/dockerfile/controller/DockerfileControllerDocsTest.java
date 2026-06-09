@@ -1,6 +1,7 @@
 package io.ten1010.dockerizerbackend.dockerfile.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.ten1010.dockerizerbackend.aipub.config.AipubProperties;
 import io.ten1010.dockerizerbackend.aipub.filter.AipubAuthenticationFilter;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileCreateRequest;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileResponse;
@@ -52,6 +53,9 @@ class DockerfileControllerDocsTest {
 
     @MockitoBean
     private DockerfileRevisionService revisionService;
+
+    @MockitoBean
+    private AipubProperties aipubProperties;
 
     @BeforeEach
     void setUp(WebApplicationContext context, RestDocumentationContextProvider restDocs) {
@@ -157,16 +161,19 @@ class DockerfileControllerDocsTest {
 
     @Test
     void listDockerfiles() throws Exception {
-        given(service.listByProject("pjw")).willReturn(List.of(sampleResponse(), sampleResponseWithoutFiles()));
+        given(service.listForUser(List.of("pjw"), "joonwoo"))
+                .willReturn(List.of(sampleResponse(), sampleResponseWithoutFiles()));
 
         mockMvc.perform(get("/api/v1alpha1/dockerfiles")
-                        .param("project", "pjw"))
+                        .param("projects", "pjw")
+                        .principal(new UsernamePasswordAuthenticationToken("joonwoo", null)))
                 .andExpect(status().isOk())
                 .andDo(document("dockerfile-list",
                         preprocessResponse(prettyPrint()),
                         queryParameters(
-                                parameterWithName("project").description("프로젝트 이름"),
-                                parameterWithName("username").description("사용자 이름 (선택)").optional()
+                                parameterWithName("projects").description("바인딩된 프로젝트 목록(멤버 조회). 호출자 본인 소유로 자동 제한된다.").optional(),
+                                parameterWithName("username").description("username 필터(관리자 전용)").optional(),
+                                parameterWithName("all").description("전체 조회 여부(관리자 전용). true 면 모든 Dockerfile 을 최신순으로 조회").optional()
                         ),
                         responseFields(
                                 fieldWithPath("[].id").description("Dockerfile ID"),
