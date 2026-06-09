@@ -277,6 +277,42 @@ if [ -z "${DB_PASSWORD}" ]; then
 fi
 log_info "DB Password: ${DB_PASSWORD:0:5}***"
 
+#------------------------------------------------------------------------------
+# OpenSearch (build log fallback) secrets — ns aipub-monitoring 의 시크릿을
+# backend ns 로 복제한다. 모니터링 스택이 없으면 graceful 하게 skip.
+#------------------------------------------------------------------------------
+OPENSEARCH_MONITORING_NS="aipub-monitoring"
+OPENSEARCH_CREDS_SECRET="opensearch-cluster-master-credentials"
+OPENSEARCH_CERTS_SECRET="opensearch-cluster-master-certs"
+OPENSEARCH_BACKEND_CERTS_SECRET="dockerizer-backend-opensearch-certs"
+OPENSEARCH_ENABLED=false
+OPENSEARCH_USERNAME=""
+OPENSEARCH_PASSWORD=""
+OPENSEARCH_URL="https://opensearch-cluster-master.${OPENSEARCH_MONITORING_NS}:9200"
+
+if sudo kubectl get secret -n "${OPENSEARCH_MONITORING_NS}" "${OPENSEARCH_CREDS_SECRET}" &> /dev/null \
+   && sudo kubectl get secret -n "${OPENSEARCH_MONITORING_NS}" "${OPENSEARCH_CERTS_SECRET}" &> /dev/null; then
+    OPENSEARCH_USERNAME=$(get_k8s_secret "${OPENSEARCH_CREDS_SECRET}" "${OPENSEARCH_MONITORING_NS}" "username")
+    OPENSEARCH_PASSWORD=$(get_k8s_secret "${OPENSEARCH_CREDS_SECRET}" "${OPENSEARCH_MONITORING_NS}" "password")
+
+    OS_CA_TMP="$(mktemp)"
+    sudo kubectl get secret -n "${OPENSEARCH_MONITORING_NS}" "${OPENSEARCH_CERTS_SECRET}" \
+        -o jsonpath='{.data.ca\.crt}' | base64 -d > "${OS_CA_TMP}"
+
+    if [ -s "${OS_CA_TMP}" ]; then
+        sudo kubectl create secret generic "${OPENSEARCH_BACKEND_CERTS_SECRET}" -n "${NAMESPACE}" \
+            --from-file=ca.crt="${OS_CA_TMP}" --dry-run=client -o yaml | sudo kubectl apply -f -
+        OPENSEARCH_ENABLED=true
+        log_success "OpenSearch fallback enabled (CA secret '${OPENSEARCH_BACKEND_CERTS_SECRET}' created in ${NAMESPACE})"
+        log_info "OpenSearch user: ${OPENSEARCH_USERNAME}, password: ${OPENSEARCH_PASSWORD:0:3}***"
+    else
+        log_warn "OpenSearch certs secret '${OPENSEARCH_CERTS_SECRET}' has empty ca.crt; OpenSearch fallback disabled"
+    fi
+    rm -f "${OS_CA_TMP}"
+else
+    log_warn "OpenSearch monitoring secrets not found in ns '${OPENSEARCH_MONITORING_NS}'; build log OpenSearch fallback disabled"
+fi
+
 #==============================================================================
 # Display Deployment Plan
 #==============================================================================
@@ -394,6 +430,22 @@ deploy_helm_chart "imagebuild-controller" \
 #==============================================================================
 log_step "Deploying dockerizer-backend"
 
+# OpenSearch fallback 활성화 시 --set 인자 + CA 볼륨 와이어링을 동적으로 구성한다.
+# values.yaml 의 기본 volumes/volumeMounts(ca-certs) 를 보존하면서 opensearch-certs 를 추가하기 위해
+# --set-json 으로 전체 리스트를 덮어쓴다.
+OPENSEARCH_SET_ARGS=()
+if [ "${OPENSEARCH_ENABLED}" = true ]; then
+    OPENSEARCH_SET_ARGS=(
+        --set applicationYaml.dockerizer.opensearch.enabled=true
+        --set applicationYaml.dockerizer.opensearch.url="${OPENSEARCH_URL}"
+        --set applicationYaml.dockerizer.opensearch.username="${OPENSEARCH_USERNAME}"
+        --set applicationYaml.dockerizer.opensearch.password="${OPENSEARCH_PASSWORD}"
+        --set applicationYaml.dockerizer.opensearch.caCertPath="/opensearch-certs/ca.crt"
+        --set-json volumes="[{\"name\":\"ca-certs\",\"secret\":{\"secretName\":\"custom-ca-certs\"}},{\"name\":\"opensearch-certs\",\"secret\":{\"secretName\":\"${OPENSEARCH_BACKEND_CERTS_SECRET}\"}}]"
+        --set-json volumeMounts="[{\"name\":\"ca-certs\",\"mountPath\":\"/certificates\",\"readOnly\":true},{\"name\":\"opensearch-certs\",\"mountPath\":\"/opensearch-certs\",\"readOnly\":true}]"
+    )
+fi
+
 deploy_helm_chart "dockerizer-backend" \
   --set image.repository="${BACKEND_IMAGE}" \
   --set image.tag="${BACKEND_TAG}" \
@@ -401,7 +453,8 @@ deploy_helm_chart "dockerizer-backend" \
   --set applicationYaml.spring.datasource.username="aipub" \
   --set applicationYaml.spring.datasource.password="${DB_PASSWORD}" \
   --set applicationYaml.logging.level.dockerizer="${LOGGING_LEVEL}" \
-  --set agent.datadog="${DATA_DOG_ENABLED}"
+  --set agent.datadog="${DATA_DOG_ENABLED}" \
+  "${OPENSEARCH_SET_ARGS[@]}"
 
 #==============================================================================
 # Patch AIPub Ingress: add Dockerizer routing paths

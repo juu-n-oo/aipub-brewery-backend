@@ -19,6 +19,7 @@ import io.ten1010.dockerizerbackend.imagebuild.dto.ImageBuildRequest;
 import io.ten1010.dockerizerbackend.imagebuild.dto.ImageBuildResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -48,6 +49,9 @@ public class ImageBuildService {
     private final CustomObjectsApi customObjectsApi;
     private final CoreV1Api coreV1Api;
     private final ApiClient apiClient;
+    // OpenSearch fallback 은 dockerizer.opensearch.enabled=true 일 때만 Bean 이 존재.
+    // 미존재(비활성) 시 getIfAvailable() 이 null → 기존 404 동작 유지.
+    private final ObjectProvider<OpenSearchBuildLogClient> openSearchBuildLogClient;
     private final Gson gson = new Gson();
     private final ExecutorService logStreamExecutor = Executors.newCachedThreadPool();
 
@@ -141,15 +145,28 @@ public class ImageBuildService {
     }
 
     public String getBuildLogs(String namespace, String name) {
-        String podName = findBuildPodName(namespace, name);
         try {
-            return coreV1Api.readNamespacedPodLog(podName, namespace).execute();
-        } catch (ApiException e) {
-            if (e.getCode() == 404) {
-                throw new ResourceNotFoundException("Build pod not found: " + namespace + "/" + podName);
+            // 살아있는 Kaniko Pod 의 stdout 을 우선 조회.
+            String podName = findBuildPodName(namespace, name);
+            try {
+                return coreV1Api.readNamespacedPodLog(podName, namespace).execute();
+            } catch (ApiException e) {
+                if (e.getCode() == 404) {
+                    // Pod 가 막 GC 된 경계 케이스도 OpenSearch fallback 으로 위임.
+                    throw new ResourceNotFoundException("Build pod not found: " + namespace + "/" + podName);
+                }
+                log.error("Failed to get build logs: {}/{}, status={}", namespace, podName, e.getCode(), e);
+                throw new RuntimeException("Failed to get build logs: " + e.getResponseBody(), e);
             }
-            log.error("Failed to get build logs: {}/{}, status={}", namespace, podName, e.getCode(), e);
-            throw new RuntimeException("Failed to get build logs: " + e.getResponseBody(), e);
+        } catch (ResourceNotFoundException e) {
+            // Pod GC 됨(또는 readLog 404) → OpenSearch fallback.
+            OpenSearchBuildLogClient client = openSearchBuildLogClient.getIfAvailable();
+            if (client == null) {
+                // OpenSearch 비활성 → 기존 404 유지.
+                throw e;
+            }
+            // 0건이면 client 가 ResourceNotFoundException 을 던져 404 로 전파.
+            return client.fetchPodLogs(namespace, name);
         }
     }
 

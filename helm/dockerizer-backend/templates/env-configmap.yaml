@@ -27,6 +27,12 @@ data:
   DOCKERIZER_REGISTRY_HUGGINGFACE_ENABLED: {{ .Values.applicationYaml.dockerizer.registry.huggingface.enabled | quote }}
   DOCKERIZER_REGISTRY_HUGGINGFACE_DOCKER_HUB_URL: {{ .Values.applicationYaml.dockerizer.registry.huggingface.dockerHubUrl | quote }}
   DOCKERIZER_REGISTRY_HUGGINGFACE_NAMESPACE: {{ .Values.applicationYaml.dockerizer.registry.huggingface.namespace | quote }}
+  DOCKERIZER_OPENSEARCH_ENABLED: {{ .Values.applicationYaml.dockerizer.opensearch.enabled | quote }}
+  DOCKERIZER_OPENSEARCH_URL: {{ .Values.applicationYaml.dockerizer.opensearch.url | quote }}
+  DOCKERIZER_OPENSEARCH_INDEX_PATTERN: {{ .Values.applicationYaml.dockerizer.opensearch.indexPattern | quote }}
+  DOCKERIZER_OPENSEARCH_VERIFY_SSL: {{ .Values.applicationYaml.dockerizer.opensearch.verifySsl | quote }}
+  DOCKERIZER_OPENSEARCH_CA_CERT_PATH: {{ .Values.applicationYaml.dockerizer.opensearch.caCertPath | quote }}
+  DOCKERIZER_OPENSEARCH_USERNAME: {{ .Values.applicationYaml.dockerizer.opensearch.username | quote }}
   MANAGEMENT_SERVER_PORT: {{ .Values.applicationYaml.management.server.port | quote }}
   MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: {{ .Values.applicationYaml.management.endpoint.health.probes.enabled | quote }}
   MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: {{ .Values.applicationYaml.management.endpoints.web.exposure.include | quote }}

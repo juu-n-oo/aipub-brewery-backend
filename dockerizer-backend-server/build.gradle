@@ -25,6 +25,10 @@ dependencies {
     implementation "io.kubernetes:client-java:$kubernetesClientVersion"
     implementation "io.kubernetes:client-java-spring-integration:$kubernetesClientVersion"
 
+    // OpenSearch client (build log fallback when Kaniko pod is GC'd)
+    implementation "org.opensearch.client:opensearch-java:$opensearchJavaVersion"
+    implementation 'org.apache.httpcomponents.client5:httpclient5'  // 버전은 Spring Boot BOM 관리
+
     // MapStruct
     implementation "org.mapstruct:mapstruct:$mapstructVersion"
     annotationProcessor "org.mapstruct:mapstruct-processor:$mapstructVersion"

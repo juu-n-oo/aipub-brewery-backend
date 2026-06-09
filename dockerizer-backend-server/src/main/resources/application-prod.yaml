@@ -20,6 +20,14 @@ dockerizer:
     verify-ssl: true
     kube-config:
       mode: IN_CLUSTER
+  opensearch:
+    enabled: ${DOCKERIZER_OPENSEARCH_ENABLED:false}
+    url: ${DOCKERIZER_OPENSEARCH_URL:}
+    username: ${DOCKERIZER_OPENSEARCH_USERNAME:}
+    password: ${DOCKERIZER_OPENSEARCH_PASSWORD:}
+    index-pattern: ${DOCKERIZER_OPENSEARCH_INDEX_PATTERN:kube-log-*}
+    verify-ssl: ${DOCKERIZER_OPENSEARCH_VERIFY_SSL:true}
+    ca-cert-path: ${DOCKERIZER_OPENSEARCH_CA_CERT_PATH:}
 
 management:
   server:

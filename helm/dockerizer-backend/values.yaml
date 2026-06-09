@@ -96,6 +96,14 @@ applicationYaml:
         enabled: false
         dockerHubUrl: https://hub.docker.com/v2
         namespace: huggingface
+    opensearch:
+      enabled: false  # 빌드 로그 OpenSearch fallback. install.sh 가 --set 으로 활성화한다.
+      url: "https://opensearch-cluster-master.aipub-monitoring:9200"
+      indexPattern: "kube-log-*"
+      verifySsl: true
+      caCertPath: "/opensearch-certs/ca.crt"
+      username: ""  # ## HELM installer ##
+      password: ""  # ## HELM installer ##
   logging:
     level:
       dockerizer: ""  # ## HELM installer ##

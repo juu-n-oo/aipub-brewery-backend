@@ -65,3 +65,5 @@ dockerizer:
       enabled: true
       docker-hub-url: https://hub.docker.com/v2
       namespace: huggingface
+  opensearch:
+    enabled: false  # 로컬에서는 빌드 로그 OpenSearch fallback 비활성
