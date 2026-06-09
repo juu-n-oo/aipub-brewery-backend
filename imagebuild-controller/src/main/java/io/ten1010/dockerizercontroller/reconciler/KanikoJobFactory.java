@@ -108,6 +108,16 @@ public class KanikoJobFactory {
         args.add("--insecure");
         args.add("--skip-tls-verify");
 
+        // OCI/provenance 라벨을 이미지 config 에 baking (--label key=value).
+        // 키 순서를 정렬해 동일 입력에 대해 결정적인 args 를 생성한다.
+        Map<String, String> imageLabels = cr.getSpec().getImageLabels();
+        if (imageLabels != null) {
+            imageLabels.entrySet().stream()
+                    .filter(e -> e.getKey() != null && !e.getKey().isBlank())
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(e -> args.add("--label=" + e.getKey() + "=" + (e.getValue() == null ? "" : e.getValue())));
+        }
+
         mounts.add(new V1VolumeMount()
                 .name(DOCKER_CONFIG_VOLUME)
                 .mountPath("/kaniko/.docker"));

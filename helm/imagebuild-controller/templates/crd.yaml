@@ -63,6 +63,11 @@ spec:
                 buildContextSubPath:
                   type: string
                   description: Sub-path within the PVC to use as build context root (optional, defaults to PVC root)
+                imageLabels:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: "OCI/provenance labels to bake into the built image config (applied via Kaniko --label key=value)"
             status:
               type: object
               properties:
