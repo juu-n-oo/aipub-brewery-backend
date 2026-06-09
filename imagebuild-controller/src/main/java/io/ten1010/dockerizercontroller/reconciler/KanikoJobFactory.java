@@ -60,7 +60,7 @@ public class KanikoJobFactory {
                         .ownerReferences(List.of(ownerReference(cr))))
                 .spec(new V1JobSpec()
                         .backoffLimit(0)
-                        .ttlSecondsAfterFinished(3600)
+                        .ttlSecondsAfterFinished(properties.getJobTtlSeconds())
                         .template(new V1PodTemplateSpec()
                                 .metadata(new V1ObjectMeta()
                                         .labels(commonLabels(cr.getName())))

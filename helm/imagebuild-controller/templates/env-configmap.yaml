@@ -10,6 +10,7 @@ data:
   DOCKERIZER_KUBERNETES_VERIFY_SSL: {{ .Values.applicationYaml.dockerizer.kubernetes.verifySsl | quote }}
   DOCKERIZER_KUBERNETES_KUBE_CONFIG_MODE: {{ .Values.applicationYaml.dockerizer.kubernetes.kubeConfig.mode | quote }}
   DOCKERIZER_IMAGEBUILD_KANIKO_IMAGE: {{ .Values.applicationYaml.dockerizer.imagebuild.kanikoImage | quote }}
+  DOCKERIZER_IMAGEBUILD_JOB_TTL_SECONDS: {{ .Values.applicationYaml.dockerizer.imagebuild.jobTtlSeconds | quote }}
   MANAGEMENT_SERVER_PORT: {{ .Values.applicationYaml.management.server.port | quote }}
   MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: {{ .Values.applicationYaml.management.endpoint.health.probes.enabled | quote }}
   MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: {{ .Values.applicationYaml.management.endpoints.web.exposure.include | quote }}

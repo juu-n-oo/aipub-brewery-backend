@@ -248,6 +248,8 @@ DATA_DOG_ENABLED=$(${YQ_COMMAND} -r '.agent.datadog // "false"' "$CONFIG_FILE")
 
 # Application
 LOGGING_LEVEL=$(${YQ_COMMAND} -r '.application.logging_level // "INFO"' "$CONFIG_FILE")
+# 빌드 Job/Pod 완료 후 GC 까지 시간(초). 이후 로그는 OpenSearch fallback 으로만 조회 가능.
+JOB_TTL_SECONDS=$(${YQ_COMMAND} -r '.application.job_ttl_seconds // "3600"' "$CONFIG_FILE")
 
 # Database
 DB_NAME=$(${YQ_COMMAND} -r '.database.name // "dockerizer"' "$CONFIG_FILE")
@@ -422,6 +424,7 @@ deploy_helm_chart "imagebuild-controller" \
   --set image.repository="${CONTROLLER_IMAGE}" \
   --set image.tag="${CONTROLLER_TAG}" \
   --set applicationYaml.dockerizer.imagebuild.kanikoImage="${KANIKO_IMAGE}" \
+  --set applicationYaml.dockerizer.imagebuild.jobTtlSeconds="${JOB_TTL_SECONDS}" \
   --set applicationYaml.logging.level.dockerizer="${LOGGING_LEVEL}" \
   --set agent.datadog="${DATA_DOG_ENABLED}"
 

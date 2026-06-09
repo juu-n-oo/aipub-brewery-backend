@@ -71,6 +71,7 @@ applicationYaml:
         mode: IN_CLUSTER
     imagebuild:
       kanikoImage: ""  # ## HELM installer ## (e.g. registry.ten1010.io:8443/aipub/kaniko-executor:v1.24.0)
+      jobTtlSeconds: 3600  # 빌드 Job/Pod 완료 후 GC 까지 시간(초). 이후 로그는 OpenSearch fallback 으로만 조회
   logging:
     level:
       dockerizer: ""  # ## HELM installer ##
