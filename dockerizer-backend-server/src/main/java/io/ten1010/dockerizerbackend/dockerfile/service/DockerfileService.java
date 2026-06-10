@@ -1,5 +1,6 @@
 package io.ten1010.dockerizerbackend.dockerfile.service;
 
+import io.ten1010.dockerizerbackend.common.exception.DuplicateResourceException;
 import io.ten1010.dockerizerbackend.common.exception.ResourceNotFoundException;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileCreateRequest;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileMapper;
@@ -28,6 +29,10 @@ public class DockerfileService {
     @Transactional
     public DockerfileResponse create(DockerfileCreateRequest request, String username) {
         validator.validate(request.getContent());
+        if (repository.existsByProjectAndUsernameAndName(request.getProject(), username, request.getName())) {
+            throw new DuplicateResourceException(
+                    "이미 같은 이름의 Dockerfile 이 있습니다: " + request.getName());
+        }
         Dockerfile entity = mapper.toEntity(request);
         entity.setUsername(username);
         entity = repository.save(entity);
@@ -86,7 +91,13 @@ public class DockerfileService {
         validator.validate(request.getContent());
         Dockerfile entity = findById(id);
 
-        if (request.getName() != null && !request.getName().isBlank()) {
+        if (request.getName() != null && !request.getName().isBlank()
+                && !request.getName().equals(entity.getName())) {
+            if (repository.existsByProjectAndUsernameAndNameAndIdNot(
+                    entity.getProject(), entity.getUsername(), request.getName(), entity.getId())) {
+                throw new DuplicateResourceException(
+                        "이미 같은 이름의 Dockerfile 이 있습니다: " + request.getName());
+            }
             entity.setName(request.getName());
         }
         if (request.getDescription() != null) {
