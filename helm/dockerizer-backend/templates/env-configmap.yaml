@@ -21,12 +21,6 @@ data:
   {{- end }}
   DOCKERIZER_VOLUME_CLIENT_MODE: {{ .Values.applicationYaml.dockerizer.volume.clientMode | quote }}
   DOCKERIZER_VOLUME_PROXY_BASE_URL: {{ .Values.applicationYaml.dockerizer.volume.proxyBaseUrl | quote }}
-  DOCKERIZER_REGISTRY_NGC_ENABLED: {{ .Values.applicationYaml.dockerizer.registry.ngc.enabled | quote }}
-  DOCKERIZER_REGISTRY_NGC_CATALOG_URL: {{ .Values.applicationYaml.dockerizer.registry.ngc.catalogUrl | quote }}
-  DOCKERIZER_REGISTRY_NGC_REGISTRY_URL: {{ .Values.applicationYaml.dockerizer.registry.ngc.registryUrl | quote }}
-  DOCKERIZER_REGISTRY_HUGGINGFACE_ENABLED: {{ .Values.applicationYaml.dockerizer.registry.huggingface.enabled | quote }}
-  DOCKERIZER_REGISTRY_HUGGINGFACE_DOCKER_HUB_URL: {{ .Values.applicationYaml.dockerizer.registry.huggingface.dockerHubUrl | quote }}
-  DOCKERIZER_REGISTRY_HUGGINGFACE_NAMESPACE: {{ .Values.applicationYaml.dockerizer.registry.huggingface.namespace | quote }}
   DOCKERIZER_OPENSEARCH_ENABLED: {{ .Values.applicationYaml.dockerizer.opensearch.enabled | quote }}
   DOCKERIZER_OPENSEARCH_URL: {{ .Values.applicationYaml.dockerizer.opensearch.url | quote }}
   DOCKERIZER_OPENSEARCH_INDEX_PATTERN: {{ .Values.applicationYaml.dockerizer.opensearch.indexPattern | quote }}

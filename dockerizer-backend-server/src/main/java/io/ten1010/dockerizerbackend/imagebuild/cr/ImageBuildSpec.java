@@ -2,6 +2,8 @@ package io.ten1010.dockerizerbackend.imagebuild.cr;
 
 import lombok.*;
 
+import java.util.Map;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -11,6 +13,8 @@ public class ImageBuildSpec {
 
     private String dockerfileContent;
     private String targetImage;
+    /** 이미지에 baking 할 라벨 맵. 컨트롤러가 Kaniko {@code --label} 로 전개한다(프론트 buildImageLabels 가 채움). */
+    private Map<String, String> imageLabels;
     private String pushSecretRef;
     private String buildContextPvc;
     private String buildContextSubPath;

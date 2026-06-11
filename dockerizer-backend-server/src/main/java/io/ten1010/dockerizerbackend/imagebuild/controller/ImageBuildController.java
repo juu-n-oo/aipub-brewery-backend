@@ -13,7 +13,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.List;
 
 // 빌드 트리거는 프론트가 k8sproxy 로 ImageBuild CR 을 직접 생성하므로 REST 트리거 엔드포인트는 제거됨.
-// (LLM 에이전트용 빌드 트리거는 MCP 도구 ImageBuildMcpTools#triggerImageBuild 로 여전히 제공된다.)
+// (MCP triggerImageBuild 도구도 함께 제거됨 — 이 API 는 목록/상태/로그 조회만 제공한다.)
 @RestController
 @RequestMapping("/api/v1alpha1/builds")
 @RequiredArgsConstructor

@@ -2,7 +2,7 @@ package io.ten1010.dockerizercontroller.cr;
 
 public final class ImageBuildConstants {
 
-    public static final String GROUP = "dockerizer.aipub.ten1010.io";
+    public static final String GROUP = "aipub.ten1010.io";
     public static final String VERSION = "v1alpha1";
     public static final String PLURAL = "imagebuilds";
     public static final String KIND = "ImageBuild";

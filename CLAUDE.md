@@ -83,7 +83,6 @@ AIPub 플랫폼 내에 **웹 기반 Dockerfile 편집 및 이미지 빌드/관�
 
 - **MVP**: 내부 **Harbor ImageHub**에 저장된 이미지만 Base 이미지로 사용 가능.
 - 사용자는 Project가 접근 권한을 가진 레지스트리의 이미지 목록에서 Base 이미지를 선택할 수 있다.
-- *외부 NGC 등 외부 레지스트리 연동은 차후 고도화 작업에서 추가.*
 
 ---
 
@@ -171,7 +170,6 @@ AIPub 플랫폼 내에 **웹 기반 Dockerfile 편집 및 이미지 빌드/관�
 - **빌드 컨텍스트 파일 전달 (COPY / ADD)**: 로컬 파일을 이미지에 포함하는 플로우는 MVP에서 지원하지 않음. (requirements.txt, 소스코드 COPY 등 포함 → 고도화 범위)
 - ~~Dockerfile 버전 관리(히스토리, diff, 롤백)~~ → ✅ **MVP 이후 구현 완료** (v1.2.0: append-only 리비전 + diff + 롤백). [docs/dockerfile-revision-versioning.html](../docs/dockerfile-revision-versioning.html)
 - 템플릿 라이브러리, Quick Build Wizard, Lint
-- 외부 레지스트리(NGC 등) 연동
 - 빌드 캐시 최적화, 빌드 큐/쿼터
 - 취약점 스캔 결과 연동, 이미지 계보/사용처 추적
 - Workspace/Job과의 연계 생성 플로우
@@ -223,9 +221,6 @@ AIPub 플랫폼 내에 **웹 기반 Dockerfile 편집 및 이미지 빌드/관�
 ### 7.4 빌드 파이프라인 고도화
 
 - **빌드 컨텍스트 파일 전달 지원 (COPY / ADD)**: 사용자가 `requirements.txt`, 소스 코드 등을 업로드하면 빌드 컨텍스트로 전달. 전달 방식 후보: 파일 업로드 → ConfigMap/PVC, AIPub Volume 참조, SFTPServer/Git 연계 등.
-- **외부 레지스트리 연동(NGC 등)**: NGC Catalog 이미지를 Base로 선택 가능.
-    - NGC API Key의 Project 단위 중앙 관리.
-    - Harbor proxy-cache 활용 검토.
 - **빌드 캐시**: Kaniko 원격 캐시(Harbor OCI artifact 또는 PVC) 활용.
 - **빌드 큐 및 리소스 쿼터**: Project별 동시 빌드 수 제한, CPU/메모리 쿼터.
 - **빌드 로그 영구 보관 및 검색**: 장기 보관, 검색 기능.

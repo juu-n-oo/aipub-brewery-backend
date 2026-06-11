@@ -9,7 +9,7 @@
 
 Dockerizer가 정의하고 관리하는 Custom Resource.
 
-- **Group**: `dockerizer.aipub.ten1010.io`
+- **Group**: `aipub.ten1010.io`
 - **Version**: `v1alpha1`
 - **Scope**: Namespaced
 - **CRD 파일**: `k8s/imagebuild-crd.yaml`

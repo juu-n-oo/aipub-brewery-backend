@@ -43,7 +43,7 @@ dockerizer-backend/                      # Gradle 멀티모듈 루트
 │       └── reconciler/                     #   ImageBuildWatcher, Reconciler, KanikoJobFactory
 │                                           #   ImageBuildStatusUpdater, EventRecorder
 ├── k8s/
-│   └── imagebuild-crd.yaml                # ImageBuild CRD (dockerizer.aipub.ten1010.io/v1alpha1)
+│   └── imagebuild-crd.yaml                # ImageBuild CRD (aipub.ten1010.io/v1alpha1)
 ├── helm/
 │   ├── backend-server/                    # backend-server Helm 차트 (ClusterRole, Deployment 등)
 │   └── imagebuild-controller/             # imagebuild-controller Helm 차트
@@ -266,8 +266,8 @@ Phase 흐름: Pending → Preparing → Building → Succeeded
                                     ↘ Failed
 
 Labels (메타데이터 저장):
-  dockerizer.aipub.ten1010.io/dockerfile-id: "1"
-  dockerizer.aipub.ten1010.io/username: "joonwoo"
+  aipub.ten1010.io/dockerfile-id: "1"
+  aipub.ten1010.io/username: "joonwoo"
 ```
 
 각 phase 전이 시 K8s Event 발행 (Normal: PhaseTransition, Warning: BuildFailed)
@@ -349,7 +349,7 @@ PVC 미지정 시에는 기존 동작대로 ConfigMap이 `/workspace`에 마운�
 
 | Resource | Verbs |
 |----------|-------|
-| `imagebuilds.dockerizer.aipub.ten1010.io` | get, list, create |
+| `imagebuilds.aipub.ten1010.io` | get, list, create |
 | `pods` | get, list |
 | `pods/log` | get |
 | `pods/exec` | get, create |
@@ -361,8 +361,8 @@ PVC 미지정 시에는 기존 동작대로 ConfigMap이 `/workspace`에 마운�
 
 | Resource | Verbs |
 |----------|-------|
-| `imagebuilds.dockerizer.aipub.ten1010.io` | get, list, watch, patch |
-| `imagebuilds.dockerizer.aipub.ten1010.io/status` | get, patch |
+| `imagebuilds.aipub.ten1010.io` | get, list, watch, patch |
+| `imagebuilds.aipub.ten1010.io/status` | get, patch |
 | `configmaps` | get, create |
 | `jobs` | get, list, create, watch |
 | `events` | create |

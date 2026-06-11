@@ -33,7 +33,7 @@ import java.util.List;
 @Slf4j
 public class ImageBuildReconciler implements Reconciler {
 
-    private static final String LABEL_IMAGEBUILD_NAME = "dockerizer.aipub.ten1010.io/imagebuild-name";
+    private static final String LABEL_IMAGEBUILD_NAME = "aipub.ten1010.io/imagebuild-name";
 
     private final CoreV1Api coreV1Api;
     private final BatchV1Api batchV1Api;

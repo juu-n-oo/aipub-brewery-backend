@@ -39,7 +39,7 @@ public class InformerControllerConfiguration {
 
     private static final String LABEL_MANAGED_BY = "app.kubernetes.io/managed-by";
     private static final String MANAGER_NAME = "dockerizer-controller";
-    private static final String LABEL_IMAGEBUILD_NAME = "dockerizer.aipub.ten1010.io/imagebuild-name";
+    private static final String LABEL_IMAGEBUILD_NAME = "aipub.ten1010.io/imagebuild-name";
     private static final String CONTROLLER_NAME = "imagebuild-controller";
 
     @Bean

@@ -16,7 +16,7 @@ import java.util.Map;
 public class KanikoJobFactory {
 
     private static final String LABEL_MANAGED_BY = "app.kubernetes.io/managed-by";
-    private static final String LABEL_IMAGEBUILD_NAME = "dockerizer.aipub.ten1010.io/imagebuild-name";
+    private static final String LABEL_IMAGEBUILD_NAME = "aipub.ten1010.io/imagebuild-name";
     private static final String MANAGER_NAME = "dockerizer-controller";
     private static final String DOCKERFILE_VOLUME = "dockerfile";
     private static final String DOCKER_CONFIG_VOLUME = "docker-config";

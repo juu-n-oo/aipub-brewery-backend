@@ -431,7 +431,7 @@ checkpoints	d	4096	2026-04-15 09:30:00.0000000000+00:00
 - `path` 파라미터에 `..` 포함 시 reject (경로 순회 방지)
 - Pod은 ReadOnly 마운트 → Volume 데이터 변경 불가
 - exec 명령어에 사용자 입력을 직접 넣지 않고, 서버에서 안전하게 조합
-- Pod은 `dockerizer.aipub.ten1010.io/purpose: volume-browser` 라벨로 식별 → 정리 용이
+- Pod은 `aipub.ten1010.io/purpose: volume-browser` 라벨로 식별 → 정리 용이
 
 #### 에러 처리
 

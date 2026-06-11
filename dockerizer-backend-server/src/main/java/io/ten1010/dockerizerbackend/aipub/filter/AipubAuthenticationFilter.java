@@ -14,6 +14,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -55,8 +56,17 @@ public class AipubAuthenticationFilter extends OncePerRequestFilter {
                             new UsernamePasswordAuthenticationToken(
                                     review.getUsername(), null, authorities));
                 }
+            } catch (HttpClientErrorException e) {
+                // 4xx: 쿠키가 없거나 만료/무효 → 정상적인 미인증으로 처리하고 요청을 계속 진행한다
+                // (다운스트림 인가 단계에서 401 처리). SRV-13.
+                log.debug("AIPub auth rejected cookie: {}", e.getStatusCode());
             } catch (Exception e) {
-                log.warn("AIPub auth verification failed: {}", e.getMessage());
+                // 5xx·연결 실패 등 일시적 업스트림 장애는 "미인증"과 구분된다. 조용히 통과시키면
+                // 잘못된 403 으로 오인되므로, 503 으로 빠르게 실패시켜 재시도를 유도한다(SRV-13).
+                log.error("AIPub auth verification failed (upstream error)", e);
+                response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+                        "Authentication service temporarily unavailable");
+                return;
             }
         }
 

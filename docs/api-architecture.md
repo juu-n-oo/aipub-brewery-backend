@@ -120,7 +120,7 @@ authenticated: 나머지 모든 요청
 
 | 리소스 | API Group | 용도 |
 |--------|-----------|------|
-| ImageBuild CR | `dockerizer.aipub.ten1010.io/v1alpha1` | 빌드 CR 생성/조회 |
+| ImageBuild CR | `aipub.ten1010.io/v1alpha1` | 빌드 CR 생성/조회 |
 | AIPubVolume CR | `aipub.ten1010.io/v1alpha1` | 볼륨 목록 조회 |
 | Pod / Pod/log | `core/v1` | 빌드 Pod 상태/로그 조회 |
 | Pod/exec | `core/v1` | 볼륨 파일 탐색 (`ls`) 및 업로드 (`dd`, stdin 스트림) — helper Pod exec |
