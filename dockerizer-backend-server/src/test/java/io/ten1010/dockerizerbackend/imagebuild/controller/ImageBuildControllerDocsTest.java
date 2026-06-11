@@ -1,8 +1,6 @@
 package io.ten1010.dockerizerbackend.imagebuild.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.ten1010.dockerizerbackend.aipub.filter.AipubAuthenticationFilter;
-import io.ten1010.dockerizerbackend.imagebuild.dto.ImageBuildRequest;
 import io.ten1010.dockerizerbackend.imagebuild.dto.ImageBuildResponse;
 import io.ten1010.dockerizerbackend.imagebuild.service.ImageBuildService;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,7 +9,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -22,12 +19,10 @@ import org.springframework.web.context.WebApplicationContext;
 import java.time.Instant;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.documentationConfiguration;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
-import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.post;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.*;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
 import static org.springframework.restdocs.request.RequestDocumentation.*;
@@ -40,8 +35,6 @@ class ImageBuildControllerDocsTest {
 
     private MockMvc mockMvc;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
     @MockitoBean
     private AipubAuthenticationFilter aipubAuthenticationFilter;
 
@@ -53,57 +46,6 @@ class ImageBuildControllerDocsTest {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(context)
                 .apply(documentationConfiguration(restDocs))
                 .build();
-    }
-
-    @Test
-    void triggerBuild() throws Exception {
-        ImageBuildResponse response = ImageBuildResponse.builder()
-                .name("imagebuild-a1b2c3d4")
-                .namespace("pjw")
-                .phase("Pending")
-                .targetImage("harbor.aipub.io/pjw/my-pytorch:v1.0")
-                .message("ImageBuild CR created successfully")
-                .dockerfileId(1L)
-                .username("joonwoo")
-                .createdAt(Instant.parse("2026-04-18T00:00:00Z"))
-                .build();
-        given(service.triggerBuild(any())).willReturn(response);
-
-        ImageBuildRequest request = new ImageBuildRequest();
-        request.setDockerfileId(1L);
-        request.setTargetImage("harbor.aipub.io/pjw/my-pytorch");
-        request.setTag("v1.0");
-
-        mockMvc.perform(post("/api/v1alpha1/builds")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isAccepted())
-                .andDo(document("build-trigger",
-                        preprocessRequest(prettyPrint()),
-                        preprocessResponse(prettyPrint()),
-                        requestFields(
-                                fieldWithPath("dockerfileId").description("빌드할 Dockerfile의 ID"),
-                                fieldWithPath("targetImage").description("대상 이미지 이름 (registry/project/image)"),
-                                fieldWithPath("tag").description("이미지 태그"),
-                                fieldWithPath("pushSecretRef").description("이미지 push용 Secret 이름 (선택)").optional(),
-                                fieldWithPath("buildContextPvc").description("빌드 컨텍스트로 사용할 PVC 이름 (COPY 사용 시 필요)").optional(),
-                                fieldWithPath("buildContextSubPath").description("PVC 내 빌드 컨텍스트 서브 경로").optional()
-                        ),
-                        responseFields(
-                                fieldWithPath("name").description("ImageBuild CR 이름"),
-                                fieldWithPath("namespace").description("빌드 namespace (= project)"),
-                                fieldWithPath("phase").description("빌드 phase (Pending/Preparing/Building/Succeeded/Failed)"),
-                                fieldWithPath("targetImage").description("대상 이미지 (tag 포함)"),
-                                fieldWithPath("message").description("상태 메시지"),
-                                fieldWithPath("imageDigest").description("빌드 성공 시 이미지 digest").optional(),
-                                fieldWithPath("dockerfileId").description("빌드에 사용된 Dockerfile ID"),
-                                fieldWithPath("username").description("빌드를 실행한 사용자"),
-                                fieldWithPath("createdAt").description("빌드 요청 시각"),
-                                fieldWithPath("startTime").description("빌드 시작 시각").optional(),
-                                fieldWithPath("completionTime").description("빌드 완료 시각").optional(),
-                                fieldWithPath("baseImage").description("Base 이미지 (FROM 대상)").optional(),
-                                fieldWithPath("dockerfileRevisionId").description("빌드에 사용된 Dockerfile 리비전 ID").optional()
-                        )));
     }
 
     @Test

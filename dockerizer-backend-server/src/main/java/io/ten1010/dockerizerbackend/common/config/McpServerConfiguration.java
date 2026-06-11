@@ -4,7 +4,6 @@ import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileCreateRequest;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileResponse;
 import io.ten1010.dockerizerbackend.dockerfile.dto.DockerfileUpdateRequest;
 import io.ten1010.dockerizerbackend.dockerfile.service.DockerfileService;
-import io.ten1010.dockerizerbackend.imagebuild.dto.ImageBuildRequest;
 import io.ten1010.dockerizerbackend.imagebuild.dto.ImageBuildResponse;
 import io.ten1010.dockerizerbackend.imagebuild.service.ImageBuildService;
 import org.springframework.ai.tool.annotation.Tool;
@@ -88,18 +87,6 @@ public class McpServerConfiguration {
 
         public ImageBuildMcpTools(ImageBuildService service) {
             this.service = service;
-        }
-
-        @Tool(description = "저장된 Dockerfile로 이미지 빌드를 트리거한다. Kaniko 기반으로 빌드 후 Harbor에 push한다.")
-        public ImageBuildResponse triggerImageBuild(
-                @ToolParam(description = "빌드할 Dockerfile의 ID") Long dockerfileId,
-                @ToolParam(description = "대상 이미지 이름 (registry/project/image)") String targetImage,
-                @ToolParam(description = "이미지 태그") String tag) {
-            ImageBuildRequest request = new ImageBuildRequest();
-            request.setDockerfileId(dockerfileId);
-            request.setTargetImage(targetImage);
-            request.setTag(tag);
-            return service.triggerBuild(request);
         }
 
         @Tool(description = "이미지 빌드의 현재 상태(phase, message, imageDigest)를 조회한다.")

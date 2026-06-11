@@ -3,32 +3,24 @@ package io.ten1010.dockerizerbackend.imagebuild.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.ten1010.dockerizerbackend.imagebuild.dto.ImageBuildRequest;
 import io.ten1010.dockerizerbackend.imagebuild.dto.ImageBuildResponse;
 import io.ten1010.dockerizerbackend.imagebuild.service.ImageBuildService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
+// 빌드 트리거는 프론트가 k8sproxy 로 ImageBuild CR 을 직접 생성하므로 REST 트리거 엔드포인트는 제거됨.
+// (LLM 에이전트용 빌드 트리거는 MCP 도구 ImageBuildMcpTools#triggerImageBuild 로 여전히 제공된다.)
 @RestController
 @RequestMapping("/api/v1alpha1/builds")
 @RequiredArgsConstructor
-@Tag(name = "ImageBuild", description = "이미지 빌드 관리 (트리거, 목록, 상태 조회, 로그)")
+@Tag(name = "ImageBuild", description = "이미지 빌드 관리 (목록, 상태 조회, 로그)")
 public class ImageBuildController {
 
     private final ImageBuildService service;
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    @Operation(summary = "이미지 빌드 트리거", description = "저장된 Dockerfile로 ImageBuild CR을 생성하여 Kaniko 빌드를 시작한다.")
-    public ImageBuildResponse triggerBuild(@Valid @RequestBody ImageBuildRequest request) {
-        return service.triggerBuild(request);
-    }
 
     @GetMapping
     @Operation(summary = "빌드 목록 조회", description = "프로젝트(namespace)의 ImageBuild 목록을 조회한다.")

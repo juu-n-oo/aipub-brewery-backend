@@ -8,14 +8,9 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.openapi.apis.CustomObjectsApi;
 import io.ten1010.dockerizerbackend.common.exception.ResourceNotFoundException;
-import io.ten1010.dockerizerbackend.dockerfile.entity.Dockerfile;
-import io.ten1010.dockerizerbackend.dockerfile.repository.DockerfileRepository;
-import io.ten1010.dockerizerbackend.dockerfile.service.DockerfileValidator;
 import io.ten1010.dockerizerbackend.imagebuild.cr.ImageBuildConstants;
-import io.ten1010.dockerizerbackend.imagebuild.cr.ImageBuildCr;
 import io.ten1010.dockerizerbackend.imagebuild.cr.ImageBuildSpec;
 import io.ten1010.dockerizerbackend.imagebuild.cr.ImageBuildStatus;
-import io.ten1010.dockerizerbackend.imagebuild.dto.ImageBuildRequest;
 import io.ten1010.dockerizerbackend.imagebuild.dto.ImageBuildResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +24,6 @@ import java.io.InputStreamReader;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -44,8 +38,6 @@ public class ImageBuildService {
     // base image 는 registry/repo:tag 형태라 label 값 제약(63자, '/' ':' 불가)에 맞지 않아 annotation 으로 저장
     private static final String ANNOTATION_BASE_IMAGE = "dockerizer.aipub.ten1010.io/base-image";
 
-    private final DockerfileRepository dockerfileRepository;
-    private final DockerfileValidator dockerfileValidator;
     private final CustomObjectsApi customObjectsApi;
     private final CoreV1Api coreV1Api;
     private final ApiClient apiClient;
@@ -54,70 +46,6 @@ public class ImageBuildService {
     private final ObjectProvider<OpenSearchBuildLogClient> openSearchBuildLogClient;
     private final Gson gson = new Gson();
     private final ExecutorService logStreamExecutor = Executors.newCachedThreadPool();
-
-    public ImageBuildResponse triggerBuild(ImageBuildRequest request) {
-        Dockerfile dockerfile = dockerfileRepository.findById(request.getDockerfileId())
-                .orElseThrow(() -> new ResourceNotFoundException("Dockerfile not found: " + request.getDockerfileId()));
-
-        dockerfileValidator.validate(dockerfile.getContent());
-
-        String fullImage = request.getTargetImage() + ":" + request.getTag();
-        String namespace = dockerfile.getProject();
-        String crName = "imagebuild-" + UUID.randomUUID().toString().substring(0, 8);
-
-        ImageBuildCr cr = ImageBuildCr.builder()
-                .apiVersion(ImageBuildConstants.API_VERSION)
-                .kind(ImageBuildConstants.KIND)
-                .metadata(Map.of(
-                        "name", crName,
-                        "namespace", namespace,
-                        "labels", Map.of(
-                                LABEL_DOCKERFILE_ID, String.valueOf(dockerfile.getId()),
-                                LABEL_REVISION_ID, String.valueOf(dockerfile.getLatestRevision() != null ? dockerfile.getLatestRevision().getId() : 0),
-                                LABEL_USERNAME, dockerfile.getUsername()
-                        ),
-                        "annotations", Map.of(
-                                ANNOTATION_BASE_IMAGE, dockerfile.getBaseImage()
-                        )
-                ))
-                .spec(ImageBuildSpec.builder()
-                        .dockerfileContent(dockerfile.getContent())
-                        .targetImage(fullImage)
-                        .pushSecretRef(request.getPushSecretRef())
-                        .buildContextPvc(request.getBuildContextPvc())
-                        .buildContextSubPath(request.getBuildContextSubPath())
-                        .buildTimeoutSeconds(request.getBuildTimeoutSeconds())
-                        .build())
-                .build();
-
-        try {
-            customObjectsApi.createNamespacedCustomObject(
-                    ImageBuildConstants.GROUP,
-                    ImageBuildConstants.VERSION,
-                    namespace,
-                    ImageBuildConstants.PLURAL,
-                    cr).execute();
-
-            log.info("Created ImageBuild CR: {}/{}", namespace, crName);
-
-            return ImageBuildResponse.builder()
-                    .name(crName)
-                    .namespace(namespace)
-                    .phase(ImageBuildConstants.PHASE_PENDING)
-                    .targetImage(fullImage)
-                    .baseImage(dockerfile.getBaseImage())
-                    .message("ImageBuild CR created successfully")
-                    .dockerfileId(dockerfile.getId())
-                    .dockerfileRevisionId(dockerfile.getLatestRevision() != null ? dockerfile.getLatestRevision().getId() : null)
-                    .username(dockerfile.getUsername())
-                    .createdAt(Instant.now())
-                    .build();
-        } catch (ApiException e) {
-            log.error("Failed to create ImageBuild CR: {}/{}, status={}, body={}",
-                    namespace, crName, e.getCode(), e.getResponseBody(), e);
-            throw new RuntimeException("Failed to create ImageBuild CR: " + e.getResponseBody(), e);
-        }
-    }
 
     @SuppressWarnings("unchecked")
     public List<ImageBuildResponse> listBuilds(String namespace) {
