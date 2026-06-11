@@ -1,3 +1,6 @@
+# 리더 선출(leader election)이 없으므로 반드시 1 을 유지한다. 1 을 초과하면 모든 replica 가
+# 동일 CR 을 중복 reconcile 한다(ConfigMap/Job 중복 생성·status patch 경합). 1 초과 시 helm 이
+# render 단계에서 실패한다(templates/deployment.yaml). HA 가 필요하면 LeaderElector 도입 후 허용.
 replicaCount: 1
 
 image:
@@ -25,11 +28,8 @@ securityContext: {}
 
 resources: {}
 
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
+# autoscaling(HPA) 은 제거됨 — C-2 참조. 컨트롤러는 CPU 로 스케일하는 워크로드가 아니며,
+# 리더 선출이 없어 다중 replica 가 위험하므로 HPA 를 의도적으로 두지 않는다.
 
 volumes:
   - name: ca-certs

@@ -1,3 +1,12 @@
+{{- /*
+  C-2: 이 컨트롤러는 리더 선출(leader election)이 없다. 다중 replica 면 모든 replica 가 각자
+  watch·reconcile 하여 동일 CR 에 대해 ConfigMap/Job 중복 생성·status patch 경합이 발생한다.
+  따라서 단일 replica 로 고정한다. HPA 템플릿은 제거됨. replicaCount>1 은 render 시점에 막는다.
+  HA 가 필요해지면 client-java-extended 의 LeaderElector(Lease) 도입 후에만 다중 replica 를 허용할 것.
+*/ -}}
+{{- if gt (int .Values.replicaCount) 1 }}
+{{- fail "imagebuild-controller has no leader election; replicaCount must be 1 (multi-replica causes duplicate reconcile). Introduce LeaderElector before scaling out." }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,9 +15,7 @@ metadata:
   labels:
     {{- include "imagebuild-controller.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "imagebuild-controller.selectorLabels" . | nindent 6 }}
