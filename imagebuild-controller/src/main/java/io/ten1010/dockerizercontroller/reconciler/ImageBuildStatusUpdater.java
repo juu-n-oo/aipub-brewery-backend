@@ -28,6 +28,12 @@ public class ImageBuildStatusUpdater {
     private final EventRecorder eventRecorder;
     private final Gson gson = new Gson();
 
+    /**
+     * 비-terminal phase 전환(Pending→Preparing, Preparing→Building) 전용.
+     * <p>
+     * CTL-6: terminal(Succeeded/Failed) 은 전적으로 {@link #markSucceeded}/{@link #markFailed} 가 구동하므로
+     * 여기서 completionTime 을 다루던 분기는 도달 불가였다 — 제거했다.
+     */
     public void transitionTo(ImageBuildResource cr, String phase, String message) {
         String previousPhase = cr.getStatus() != null ? cr.getStatus().getPhase() : null;
 
@@ -39,45 +45,38 @@ public class ImageBuildStatusUpdater {
         if (ImageBuildConstants.PHASE_PREPARING.equals(phase)) {
             status.setStartTime(Instant.now().toString());
         }
-        if (ImageBuildConstants.PHASE_SUCCEEDED.equals(phase) || ImageBuildConstants.PHASE_FAILED.equals(phase)) {
-            status.setCompletionTime(Instant.now().toString());
-        }
 
-        patchStatus(cr.getNamespace(), cr.getName(), status);
+        applyStatus(cr, status);
 
         String eventReason = "PhaseTransition";
         String eventMessage = String.format("Phase changed: %s -> %s. %s",
                 previousPhase != null ? previousPhase : "none", phase, message);
-
-        if (ImageBuildConstants.PHASE_FAILED.equals(phase)) {
-            eventRecorder.recordWarning(cr, eventReason, eventMessage);
-        } else {
-            eventRecorder.recordNormal(cr, eventReason, eventMessage);
-        }
+        eventRecorder.recordNormal(cr, eventReason, eventMessage);
     }
 
     public void markSucceeded(ImageBuildResource cr, String imageDigest) {
-        ImageBuildStatus status = ImageBuildStatus.builder()
+        applyStatus(cr, ImageBuildStatus.builder()
                 .phase(ImageBuildConstants.PHASE_SUCCEEDED)
                 .completionTime(Instant.now().toString())
                 .imageDigest(imageDigest)
                 .message("Build completed successfully")
-                .build();
-
-        patchStatus(cr.getNamespace(), cr.getName(), status);
+                .build());
         eventRecorder.recordNormal(cr, "BuildSucceeded",
                 "Image built and pushed successfully" + (imageDigest != null ? ": " + imageDigest : ""));
     }
 
     public void markFailed(ImageBuildResource cr, String message) {
-        ImageBuildStatus status = ImageBuildStatus.builder()
+        applyStatus(cr, ImageBuildStatus.builder()
                 .phase(ImageBuildConstants.PHASE_FAILED)
                 .completionTime(Instant.now().toString())
                 .message(message)
-                .build();
-
-        patchStatus(cr.getNamespace(), cr.getName(), status);
+                .build());
         eventRecorder.recordWarning(cr, "BuildFailed", message);
+    }
+
+    /** CTL-6: 모든 status 쓰기의 단일 진입점. */
+    private void applyStatus(ImageBuildResource cr, ImageBuildStatus status) {
+        patchStatus(cr.getNamespace(), cr.getName(), status);
     }
 
     private void patchStatus(String namespace, String name, ImageBuildStatus status) {

@@ -3,7 +3,6 @@ package io.ten1010.dockerizercontroller.reconciler;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.CoreV1Event;
-import io.kubernetes.client.openapi.models.V1EventSource;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1ObjectReference;
 import io.ten1010.dockerizercontroller.cr.ImageBuildConstants;
@@ -36,6 +35,8 @@ public class EventRecorder {
         String namespace = cr.getNamespace();
         OffsetDateTime now = OffsetDateTime.now();
 
+        // CTL-9: modern(events.k8s.io) 관례로 통일 — eventTime + reportingComponent/reportingInstance + action.
+        // legacy firstTimestamp/lastTimestamp 와 source.component 는 중복이라 설정하지 않는다.
         CoreV1Event event = new CoreV1Event()
                 .apiVersion("v1")
                 .kind("Event")
@@ -54,10 +55,7 @@ public class EventRecorder {
                 .eventTime(now)
                 .reportingComponent(COMPONENT)
                 .reportingInstance(COMPONENT)
-                .action(reason)
-                .firstTimestamp(now)
-                .lastTimestamp(now)
-                .source(new V1EventSource().component(COMPONENT));
+                .action(reason);
 
         try {
             coreV1Api.createNamespacedEvent(namespace, event).execute();

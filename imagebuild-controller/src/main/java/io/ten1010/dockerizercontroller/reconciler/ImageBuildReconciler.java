@@ -71,24 +71,26 @@ public class ImageBuildReconciler implements Reconciler {
 
     /**
      * Pending → Preparing: ConfigMap 생성
+     * <p>
+     * CTL-1: 존재 여부를 미리 read 하지 않는다(비-404 read 오류를 "없음" 으로 삼키는 false-negative 제거).
+     * create 를 그대로 시도하고 409(이미 존재)만 멱등 성공으로 흡수한다.
      */
     private void handlePending(ImageBuildResource cr) {
         String namespace = cr.getNamespace();
         String configMapName = cr.getName() + "-dockerfile";
 
-        if (!configMapExists(namespace, configMapName)) {
-            try {
-                V1ConfigMap configMap = jobFactory.createDockerfileConfigMap(cr);
-                coreV1Api.createNamespacedConfigMap(namespace, configMap).execute();
-                log.info("Created ConfigMap: {}/{}", namespace, configMapName);
-            } catch (ApiException e) {
-                if (e.getCode() != 409) {
-                    log.error("Failed to create ConfigMap: {}/{}", namespace, configMapName, e);
-                    statusUpdater.markFailed(cr, "Failed to create ConfigMap: " + e.getResponseBody());
-                    deleteDockerfileConfigMap(cr);
-                    return;
-                }
+        try {
+            V1ConfigMap configMap = jobFactory.createDockerfileConfigMap(cr);
+            coreV1Api.createNamespacedConfigMap(namespace, configMap).execute();
+            log.info("Created ConfigMap: {}/{}", namespace, configMapName);
+        } catch (ApiException e) {
+            if (e.getCode() == 409) {
                 log.debug("ConfigMap {}/{} already exists", namespace, configMapName);
+            } else {
+                log.error("Failed to create ConfigMap: {}/{}", namespace, configMapName, e);
+                statusUpdater.markFailed(cr, "Failed to create ConfigMap: " + e.getResponseBody());
+                deleteDockerfileConfigMap(cr);
+                return;
             }
         }
 
@@ -98,24 +100,25 @@ public class ImageBuildReconciler implements Reconciler {
 
     /**
      * Preparing → Building: Kaniko Job 생성
+     * <p>
+     * CTL-1: handlePending 과 동일하게 사전 존재 검사 없이 create + 409 멱등으로 처리한다.
      */
     private void handlePreparing(ImageBuildResource cr) {
         String namespace = cr.getNamespace();
         String jobName = cr.getName() + "-job";
 
-        if (!jobExists(namespace, jobName)) {
-            try {
-                V1Job job = jobFactory.createKanikoJob(cr);
-                batchV1Api.createNamespacedJob(namespace, job).execute();
-                log.info("Created Kaniko Job: {}/{}", namespace, jobName);
-            } catch (ApiException e) {
-                if (e.getCode() != 409) {
-                    log.error("Failed to create Job: {}/{}", namespace, jobName, e);
-                    statusUpdater.markFailed(cr, "Failed to create Kaniko job: " + e.getResponseBody());
-                    deleteDockerfileConfigMap(cr);
-                    return;
-                }
+        try {
+            V1Job job = jobFactory.createKanikoJob(cr);
+            batchV1Api.createNamespacedJob(namespace, job).execute();
+            log.info("Created Kaniko Job: {}/{}", namespace, jobName);
+        } catch (ApiException e) {
+            if (e.getCode() == 409) {
                 log.debug("Job {}/{} already exists", namespace, jobName);
+            } else {
+                log.error("Failed to create Job: {}/{}", namespace, jobName, e);
+                statusUpdater.markFailed(cr, "Failed to create Kaniko job: " + e.getResponseBody());
+                deleteDockerfileConfigMap(cr);
+                return;
             }
         }
 
@@ -152,7 +155,10 @@ public class ImageBuildReconciler implements Reconciler {
             if (e.getCode() == 404) {
                 statusUpdater.markFailed(cr, "Kaniko job not found");
             } else {
-                log.error("Failed to check Job status: {}/{}", namespace, jobName, e);
+                // CTL-2: 종료 감지 구간의 일시 read 실패는 no-op 으로 흘리지 않고 requeue 한다
+                // (reconcile 의 catch(RuntimeException) 가 Result(true) 로 재시도).
+                throw new RuntimeException(
+                        "Failed to read Job status for " + namespace + "/" + jobName, e);
             }
         }
     }
@@ -214,25 +220,8 @@ public class ImageBuildReconciler implements Reconciler {
         return cr.getStatus().getPhase();
     }
 
-    private boolean configMapExists(String namespace, String name) {
-        try {
-            coreV1Api.readNamespacedConfigMap(name, namespace).execute();
-            return true;
-        } catch (ApiException e) {
-            return false;
-        }
-    }
-
-    private boolean jobExists(String namespace, String name) {
-        try {
-            batchV1Api.readNamespacedJob(name, namespace).execute();
-            return true;
-        } catch (ApiException e) {
-            return false;
-        }
-    }
-
-    private String extractFailureMessage(V1JobStatus jobStatus, ImageBuildResource cr) {
+    // CTL-7: 순수 분기 로직이라 단위 테스트 대상 — 같은 패키지 테스트에서 접근하도록 package-private.
+    String extractFailureMessage(V1JobStatus jobStatus, ImageBuildResource cr) {
         List<V1JobCondition> conditions = jobStatus.getConditions();
         if (conditions != null) {
             for (V1JobCondition condition : conditions) {

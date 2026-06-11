@@ -26,18 +26,35 @@ public class KanikoJobFactory {
     // k8s 가 파일 내용(digest)을 containerStatus.terminated.message 로 캡처하게 한다.
     private static final String DIGEST_FILE_PATH = "/dev/termination-log";
 
+    // CTL-4: 산재하던 apiVersion/kind/policy·마운트 경로·키·접미사 리터럴을 named 상수로 승격.
+    private static final String API_VERSION_CORE = "v1";
+    private static final String KIND_CONFIGMAP = "ConfigMap";
+    private static final String API_VERSION_BATCH = "batch/v1";
+    private static final String KIND_JOB = "Job";
+    private static final String RESTART_POLICY_NEVER = "Never";
+    private static final String TERMINATION_MESSAGE_POLICY_FILE = "File";
+    // ConfigMap data 키이자 마운트 시 파일명(둘은 반드시 같아야 한다).
+    private static final String DOCKERFILE_NAME = "Dockerfile";
+    private static final String SUFFIX_DOCKERFILE = "-dockerfile";
+    private static final String SUFFIX_JOB = "-job";
+    // Kaniko 컨테이너 마운트 경로
+    private static final String MOUNT_KANIKO_CONFIG = "/kaniko-config";
+    private static final String MOUNT_BUILD_CONTEXT = "/build-context";
+    private static final String MOUNT_WORKSPACE = "/workspace";
+    private static final String MOUNT_DOCKER_CONFIG = "/kaniko/.docker";
+
     private final ControllerProperties properties;
 
     public V1ConfigMap createDockerfileConfigMap(ImageBuildResource cr) {
         return new V1ConfigMap()
-                .apiVersion("v1")
-                .kind("ConfigMap")
+                .apiVersion(API_VERSION_CORE)
+                .kind(KIND_CONFIGMAP)
                 .metadata(new V1ObjectMeta()
                         .name(configMapName(cr.getName()))
                         .namespace(cr.getNamespace())
                         .labels(commonLabels(cr.getName()))
                         .ownerReferences(List.of(ownerReference(cr))))
-                .data(Map.of("Dockerfile", cr.getSpec().getDockerfileContent()));
+                .data(Map.of(DOCKERFILE_NAME, cr.getSpec().getDockerfileContent()));
     }
 
     public V1Job createKanikoJob(ImageBuildResource cr) {
@@ -54,8 +71,8 @@ public class KanikoJobFactory {
         }
 
         return new V1Job()
-                .apiVersion("batch/v1")
-                .kind("Job")
+                .apiVersion(API_VERSION_BATCH)
+                .kind(KIND_JOB)
                 .metadata(new V1ObjectMeta()
                         .name(jobName(cr.getName()))
                         .namespace(namespace)
@@ -69,28 +86,61 @@ public class KanikoJobFactory {
                                 .metadata(new V1ObjectMeta()
                                         .labels(commonLabels(cr.getName())))
                                 .spec(new V1PodSpec()
-                                        .restartPolicy("Never")
+                                        .restartPolicy(RESTART_POLICY_NEVER)
                                         .containers(List.of(kanikoContainer(cr, hasBuildContext)))
                                         .volumes(volumes))));
     }
 
+    // CTL-3: 컨테이너 정의는 args/mounts 조립을 전담 헬퍼로 위임해 분기 중복(특히 dockerfile 마운트)을 제거한다.
     private V1Container kanikoContainer(ImageBuildResource cr, boolean hasBuildContext) {
-        List<String> args = new ArrayList<>();
-        List<V1VolumeMount> mounts = new ArrayList<>();
+        return new V1Container()
+                .name(KANIKO_CONTAINER_NAME)
+                .image(properties.getKanikoImage())
+                .args(buildArgs(cr, hasBuildContext))
+                .volumeMounts(buildMounts(cr, hasBuildContext))
+                // digest 를 termination message 로 캡처하기 위한 명시 설정(기본값과 동일하나 명시)
+                .terminationMessagePath(DIGEST_FILE_PATH)
+                .terminationMessagePolicy(TERMINATION_MESSAGE_POLICY_FILE);
+    }
 
+    List<String> buildArgs(ImageBuildResource cr, boolean hasBuildContext) {
+        List<String> args = new ArrayList<>();
         if (hasBuildContext) {
             // PVC is the build context at /build-context (read-only);
             // /workspace is reserved for Kaniko's image layer writes
-            args.add("--dockerfile=/kaniko-config/Dockerfile");
-            args.add("--context=dir:///build-context");
+            args.add("--dockerfile=" + MOUNT_KANIKO_CONFIG + "/" + DOCKERFILE_NAME);
+            args.add("--context=dir://" + MOUNT_BUILD_CONTEXT);
+        } else {
+            // No PVC: Dockerfile ConfigMap IS the build context
+            args.add("--dockerfile=" + MOUNT_WORKSPACE + "/" + DOCKERFILE_NAME);
+            args.add("--context=dir://" + MOUNT_WORKSPACE);
+        }
 
+        args.add("--destination=" + cr.getSpec().getTargetImage());
+        args.add("--cache=false");
+        // C-7: insecure / TLS skip 은 토글(기본 true = 내부 Harbor self-signed 대상 현행 유지)
+        if (properties.isRegistryInsecure()) {
+            args.add("--insecure");
+        }
+        if (properties.isRegistrySkipTlsVerify()) {
+            args.add("--skip-tls-verify");
+        }
+        // C-6: 빌드된 이미지 digest 를 termination message 로 출력 → 컨트롤러가 Pod 에서 읽어 status 에 기록
+        args.add("--digest-file=" + DIGEST_FILE_PATH);
+        args.addAll(labelArgs(cr.getSpec().getImageLabels()));
+        return args;
+    }
+
+    List<V1VolumeMount> buildMounts(ImageBuildResource cr, boolean hasBuildContext) {
+        List<V1VolumeMount> mounts = new ArrayList<>();
+        if (hasBuildContext) {
             mounts.add(new V1VolumeMount()
                     .name(DOCKERFILE_VOLUME)
-                    .mountPath("/kaniko-config"));
+                    .mountPath(MOUNT_KANIKO_CONFIG));
 
             V1VolumeMount contextMount = new V1VolumeMount()
                     .name(BUILD_CONTEXT_VOLUME)
-                    .mountPath("/build-context");
+                    .mountPath(MOUNT_BUILD_CONTEXT);
             String subPath = cr.getSpec().getBuildContextSubPath();
             if (subPath != null && !subPath.isBlank()) {
                 // Strip leading slash for k8s subPath
@@ -98,49 +148,30 @@ public class KanikoJobFactory {
             }
             mounts.add(contextMount);
         } else {
-            // No PVC: Dockerfile ConfigMap IS the build context
-            args.add("--dockerfile=/workspace/Dockerfile");
-            args.add("--context=dir:///workspace");
-
             mounts.add(new V1VolumeMount()
                     .name(DOCKERFILE_VOLUME)
-                    .mountPath("/workspace"));
-        }
-
-        args.add("--destination=" + cr.getSpec().getTargetImage());
-        args.add("--cache=false");
-        // C-7: insecure / TLS skip 은 토글(기본 true = 내부 Harbor self-signed 대상 현행 유지)
-        if (Boolean.TRUE.equals(properties.getRegistryInsecure())) {
-            args.add("--insecure");
-        }
-        if (Boolean.TRUE.equals(properties.getRegistrySkipTlsVerify())) {
-            args.add("--skip-tls-verify");
-        }
-        // C-6: 빌드된 이미지 digest 를 termination message 로 출력 → 컨트롤러가 Pod 에서 읽어 status 에 기록
-        args.add("--digest-file=" + DIGEST_FILE_PATH);
-
-        // OCI/provenance 라벨을 이미지 config 에 baking (--label key=value).
-        // 키 순서를 정렬해 동일 입력에 대해 결정적인 args 를 생성한다.
-        Map<String, String> imageLabels = cr.getSpec().getImageLabels();
-        if (imageLabels != null) {
-            imageLabels.entrySet().stream()
-                    .filter(e -> e.getKey() != null && !e.getKey().isBlank())
-                    .sorted(Map.Entry.comparingByKey())
-                    .forEach(e -> args.add("--label=" + e.getKey() + "=" + (e.getValue() == null ? "" : e.getValue())));
+                    .mountPath(MOUNT_WORKSPACE));
         }
 
         mounts.add(new V1VolumeMount()
                 .name(DOCKER_CONFIG_VOLUME)
-                .mountPath("/kaniko/.docker"));
+                .mountPath(MOUNT_DOCKER_CONFIG));
+        return mounts;
+    }
 
-        return new V1Container()
-                .name(KANIKO_CONTAINER_NAME)
-                .image(properties.getKanikoImage())
-                .args(args)
-                .volumeMounts(mounts)
-                // digest 를 termination message 로 캡처하기 위한 명시 설정(기본값과 동일하나 명시)
-                .terminationMessagePath(DIGEST_FILE_PATH)
-                .terminationMessagePolicy("File");
+    /**
+     * OCI/provenance 라벨을 이미지 config 에 baking 하기 위한 {@code --label key=value} args.
+     * 키 순서를 정렬해 동일 입력에 대해 결정적인 args 를 생성한다.
+     */
+    List<String> labelArgs(Map<String, String> imageLabels) {
+        if (imageLabels == null) {
+            return List.of();
+        }
+        return imageLabels.entrySet().stream()
+                .filter(e -> e.getKey() != null && !e.getKey().isBlank())
+                .sorted(Map.Entry.comparingByKey())
+                .map(e -> "--label=" + e.getKey() + "=" + (e.getValue() == null ? "" : e.getValue()))
+                .toList();
     }
 
     private V1Volume dockerfileVolume(String crName) {
@@ -207,11 +238,11 @@ public class KanikoJobFactory {
     }
 
     private String configMapName(String crName) {
-        return crName + "-dockerfile";
+        return crName + SUFFIX_DOCKERFILE;
     }
 
     private String jobName(String crName) {
-        return crName + "-job";
+        return crName + SUFFIX_JOB;
     }
 
 }
