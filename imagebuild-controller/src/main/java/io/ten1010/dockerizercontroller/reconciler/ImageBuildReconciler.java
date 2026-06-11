@@ -1,15 +1,16 @@
 package io.ten1010.dockerizercontroller.reconciler;
 
-import com.google.gson.Gson;
+import io.kubernetes.client.extended.controller.reconciler.Reconciler;
+import io.kubernetes.client.extended.controller.reconciler.Request;
+import io.kubernetes.client.extended.controller.reconciler.Result;
+import io.kubernetes.client.informer.cache.Lister;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
-import io.kubernetes.client.openapi.apis.CustomObjectsApi;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1JobCondition;
 import io.kubernetes.client.openapi.models.V1JobStatus;
-import io.ten1010.dockerizercontroller.config.ControllerProperties;
 import io.ten1010.dockerizercontroller.cr.ImageBuildConstants;
 import io.ten1010.dockerizercontroller.cr.ImageBuildResource;
 import lombok.RequiredArgsConstructor;
@@ -18,35 +19,48 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * ImageBuild CR 을 reconcile 하는 워크큐 기반 컨트롤러 reconciler.
+ * <p>
+ * CR 은 live GET 대신 informer 캐시({@link Lister})에서 읽는다. phase 기반 단방향 상태머신이며
+ * 멱등(존재 검사 + 409 무시)하므로, resync/재시작으로 reconcile 이 여러 번 돌아도 안전하다.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class ImageBuildReconciler {
+public class ImageBuildReconciler implements Reconciler {
 
-    private final CustomObjectsApi customObjectsApi;
     private final CoreV1Api coreV1Api;
     private final BatchV1Api batchV1Api;
-    private final ControllerProperties properties;
     private final KanikoJobFactory jobFactory;
     private final ImageBuildStatusUpdater statusUpdater;
-    private final Gson gson = new Gson();
+    private final Lister<ImageBuildResource> lister;
 
-    public void reconcile(String namespace, String name) {
-        ImageBuildResource cr = getImageBuild(namespace, name);
+    @Override
+    public Result reconcile(Request request) {
+        String namespace = request.getNamespace();
+        String name = request.getName();
+
+        ImageBuildResource cr = lister.namespace(namespace).get(name);
         if (cr == null) {
-            log.debug("ImageBuild {}/{} not found, skipping", namespace, name);
-            return;
+            log.debug("ImageBuild {}/{} not found in cache, skipping", namespace, name);
+            return new Result(false);
         }
 
-        String phase = currentPhase(cr);
-
-        switch (phase) {
-            case ImageBuildConstants.PHASE_PENDING -> handlePending(cr);
-            case ImageBuildConstants.PHASE_PREPARING -> handlePreparing(cr);
-            case ImageBuildConstants.PHASE_BUILDING -> handleBuilding(cr);
-            case ImageBuildConstants.PHASE_SUCCEEDED, ImageBuildConstants.PHASE_FAILED ->
-                    log.debug("ImageBuild {}/{} already in terminal phase: {}", namespace, name, phase);
-            default -> log.warn("ImageBuild {}/{} has unknown phase: {}", namespace, name, phase);
+        try {
+            String phase = currentPhase(cr);
+            switch (phase) {
+                case ImageBuildConstants.PHASE_PENDING -> handlePending(cr);
+                case ImageBuildConstants.PHASE_PREPARING -> handlePreparing(cr);
+                case ImageBuildConstants.PHASE_BUILDING -> handleBuilding(cr);
+                case ImageBuildConstants.PHASE_SUCCEEDED, ImageBuildConstants.PHASE_FAILED ->
+                        log.debug("ImageBuild {}/{} already in terminal phase: {}", namespace, name, phase);
+                default -> log.warn("ImageBuild {}/{} has unknown phase: {}", namespace, name, phase);
+            }
+            return new Result(false);
+        } catch (RuntimeException e) {
+            log.error("Reconcile error for ImageBuild {}/{}, requeueing", namespace, name, e);
+            return new Result(true);
         }
     }
 
@@ -130,24 +144,6 @@ public class ImageBuildReconciler {
             } else {
                 log.error("Failed to check Job status: {}/{}", namespace, jobName, e);
             }
-        }
-    }
-
-    private ImageBuildResource getImageBuild(String namespace, String name) {
-        try {
-            Object result = customObjectsApi.getNamespacedCustomObject(
-                    properties.getGroup(),
-                    properties.getVersion(),
-                    namespace,
-                    properties.getPlural(),
-                    name).execute();
-            return gson.fromJson(gson.toJson(result), ImageBuildResource.class);
-        } catch (ApiException e) {
-            if (e.getCode() == 404) {
-                return null;
-            }
-            log.error("Failed to get ImageBuild: {}/{}", namespace, name, e);
-            return null;
         }
     }
 

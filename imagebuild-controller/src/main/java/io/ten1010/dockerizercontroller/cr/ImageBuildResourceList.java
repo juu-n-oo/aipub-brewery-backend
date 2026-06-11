@@ -1,20 +1,21 @@
 package io.ten1010.dockerizercontroller.cr;
 
+import io.kubernetes.client.common.KubernetesListObject;
+import io.kubernetes.client.openapi.models.V1ListMeta;
 import lombok.*;
 
 import java.util.List;
-import java.util.Map;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ImageBuildResourceList {
+public class ImageBuildResourceList implements KubernetesListObject {
 
     private String apiVersion;
     private String kind;
-    private Map<String, Object> metadata;
+    private V1ListMeta metadata;
     private List<ImageBuildResource> items;
 
 }

@@ -156,9 +156,11 @@ public class KanikoJobFactory {
     }
 
     private V1OwnerReference ownerReference(ImageBuildResource cr) {
+        // informer 캐시에서 읽은 객체는 top-level apiVersion/kind 가 비어 있을 수 있으므로
+        // CR 식별자 상수를 사용한다(ownerReference 가 비면 GC 가 깨진다).
         return new V1OwnerReference()
-                .apiVersion(cr.getApiVersion())
-                .kind(cr.getKind())
+                .apiVersion(ImageBuildConstants.API_VERSION)
+                .kind(ImageBuildConstants.KIND)
                 .name(cr.getName())
                 .uid(cr.getUid())
                 .controller(true)
