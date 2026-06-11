@@ -28,5 +28,9 @@ public class ControllerProperties {
     private Integer resyncPeriodSeconds = 45;
     // workqueue 워커 스레드 수. 워크큐가 동일 키의 동시 처리를 막으므로 1 이면 완전 직렬.
     private Integer workerCount = 1;
+    // C-7: Kaniko push 시 insecure registry 허용 / TLS 검증 skip 토글.
+    // 내부 Harbor(self-signed) 대상이라 기본 true(현행 유지). 신뢰 가능한 레지스트리면 false 로.
+    private Boolean registryInsecure = true;
+    private Boolean registrySkipTlsVerify = true;
 
 }

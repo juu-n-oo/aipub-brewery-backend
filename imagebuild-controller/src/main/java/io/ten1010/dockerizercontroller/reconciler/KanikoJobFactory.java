@@ -21,7 +21,10 @@ public class KanikoJobFactory {
     private static final String DOCKERFILE_VOLUME = "dockerfile";
     private static final String DOCKER_CONFIG_VOLUME = "docker-config";
     private static final String BUILD_CONTEXT_VOLUME = "build-context";
-    private static final String KANIKO_CONTAINER_NAME = "kaniko";
+    public static final String KANIKO_CONTAINER_NAME = "kaniko";
+    // Kaniko --digest-file 출력 경로. 컨테이너 terminationMessagePath 와 동일하게 두어
+    // k8s 가 파일 내용(digest)을 containerStatus.terminated.message 로 캡처하게 한다.
+    private static final String DIGEST_FILE_PATH = "/dev/termination-log";
 
     private final ControllerProperties properties;
 
@@ -106,8 +109,15 @@ public class KanikoJobFactory {
 
         args.add("--destination=" + cr.getSpec().getTargetImage());
         args.add("--cache=false");
-        args.add("--insecure");
-        args.add("--skip-tls-verify");
+        // C-7: insecure / TLS skip 은 토글(기본 true = 내부 Harbor self-signed 대상 현행 유지)
+        if (Boolean.TRUE.equals(properties.getRegistryInsecure())) {
+            args.add("--insecure");
+        }
+        if (Boolean.TRUE.equals(properties.getRegistrySkipTlsVerify())) {
+            args.add("--skip-tls-verify");
+        }
+        // C-6: 빌드된 이미지 digest 를 termination message 로 출력 → 컨트롤러가 Pod 에서 읽어 status 에 기록
+        args.add("--digest-file=" + DIGEST_FILE_PATH);
 
         // OCI/provenance 라벨을 이미지 config 에 baking (--label key=value).
         // 키 순서를 정렬해 동일 입력에 대해 결정적인 args 를 생성한다.
@@ -127,7 +137,10 @@ public class KanikoJobFactory {
                 .name(KANIKO_CONTAINER_NAME)
                 .image(properties.getKanikoImage())
                 .args(args)
-                .volumeMounts(mounts);
+                .volumeMounts(mounts)
+                // digest 를 termination message 로 캡처하기 위한 명시 설정(기본값과 동일하나 명시)
+                .terminationMessagePath(DIGEST_FILE_PATH)
+                .terminationMessagePolicy("File");
     }
 
     private V1Volume dockerfileVolume(String crName) {

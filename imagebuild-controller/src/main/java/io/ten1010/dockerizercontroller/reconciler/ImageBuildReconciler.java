@@ -8,9 +8,12 @@ import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
+import io.kubernetes.client.openapi.models.V1ContainerStatus;
 import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1JobCondition;
 import io.kubernetes.client.openapi.models.V1JobStatus;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodList;
 import io.ten1010.dockerizercontroller.cr.ImageBuildConstants;
 import io.ten1010.dockerizercontroller.cr.ImageBuildResource;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class ImageBuildReconciler implements Reconciler {
+
+    private static final String LABEL_IMAGEBUILD_NAME = "dockerizer.aipub.ten1010.io/imagebuild-name";
 
     private final CoreV1Api coreV1Api;
     private final BatchV1Api batchV1Api;
@@ -80,6 +85,7 @@ public class ImageBuildReconciler implements Reconciler {
                 if (e.getCode() != 409) {
                     log.error("Failed to create ConfigMap: {}/{}", namespace, configMapName, e);
                     statusUpdater.markFailed(cr, "Failed to create ConfigMap: " + e.getResponseBody());
+                    deleteDockerfileConfigMap(cr);
                     return;
                 }
                 log.debug("ConfigMap {}/{} already exists", namespace, configMapName);
@@ -106,6 +112,7 @@ public class ImageBuildReconciler implements Reconciler {
                 if (e.getCode() != 409) {
                     log.error("Failed to create Job: {}/{}", namespace, jobName, e);
                     statusUpdater.markFailed(cr, "Failed to create Kaniko job: " + e.getResponseBody());
+                    deleteDockerfileConfigMap(cr);
                     return;
                 }
                 log.debug("Job {}/{} already exists", namespace, jobName);
@@ -131,11 +138,14 @@ public class ImageBuildReconciler implements Reconciler {
             }
 
             if (jobStatus.getSucceeded() != null && jobStatus.getSucceeded() > 0) {
-                statusUpdater.markSucceeded(cr, null);
-                log.info("ImageBuild succeeded: {}/{}", namespace, cr.getName());
+                String imageDigest = readImageDigest(namespace, cr.getName());
+                statusUpdater.markSucceeded(cr, imageDigest);
+                deleteDockerfileConfigMap(cr);
+                log.info("ImageBuild succeeded: {}/{} (digest={})", namespace, cr.getName(), imageDigest);
             } else if (jobStatus.getFailed() != null && jobStatus.getFailed() > 0) {
                 String failMsg = extractFailureMessage(jobStatus, cr);
                 statusUpdater.markFailed(cr, failMsg);
+                deleteDockerfileConfigMap(cr);
                 log.info("ImageBuild failed: {}/{} - {}", namespace, cr.getName(), failMsg);
             }
         } catch (ApiException e) {
@@ -143,6 +153,56 @@ public class ImageBuildReconciler implements Reconciler {
                 statusUpdater.markFailed(cr, "Kaniko job not found");
             } else {
                 log.error("Failed to check Job status: {}/{}", namespace, jobName, e);
+            }
+        }
+    }
+
+    /**
+     * C-6: 빌드된 이미지의 digest 를 읽는다. Kaniko 가 {@code --digest-file} 로 출력한 값을 k8s 가
+     * 빌드 Pod 의 kaniko 컨테이너 {@code terminated.message} 로 캡처한다. 미취득(Pod GC/빈 값/오류)
+     * 시 null 을 반환하며, 빌드 성공 자체는 유지한다.
+     */
+    private String readImageDigest(String namespace, String crName) {
+        try {
+            V1PodList pods = coreV1Api.listNamespacedPod(namespace)
+                    .labelSelector(LABEL_IMAGEBUILD_NAME + "=" + crName)
+                    .execute();
+            for (V1Pod pod : pods.getItems()) {
+                if (pod.getStatus() == null || pod.getStatus().getContainerStatuses() == null) {
+                    continue;
+                }
+                for (V1ContainerStatus cs : pod.getStatus().getContainerStatuses()) {
+                    if (KanikoJobFactory.KANIKO_CONTAINER_NAME.equals(cs.getName())
+                            && cs.getState() != null
+                            && cs.getState().getTerminated() != null) {
+                        String message = cs.getState().getTerminated().getMessage();
+                        if (message != null && !message.isBlank()) {
+                            return message.trim();
+                        }
+                    }
+                }
+            }
+        } catch (ApiException e) {
+            log.warn("Failed to read image digest for {}/{}: code={}", namespace, crName, e.getCode());
+        }
+        return null;
+    }
+
+    /**
+     * C-9: 빌드 Dockerfile ConfigMap 을 삭제한다(terminal phase 도달 시 1회). Dockerfile 본문은 DB 와
+     * CR {@code spec.dockerfileContent} 에 보존되므로 손실이 없다. CM 수명을 CR 수명에서 분리해
+     * 빌드 이력 보존 시에도 CM 이 무한 누적되지 않게 한다. 404(이미 없음)는 무시한다.
+     */
+    private void deleteDockerfileConfigMap(ImageBuildResource cr) {
+        String namespace = cr.getNamespace();
+        String configMapName = cr.getName() + "-dockerfile";
+        try {
+            coreV1Api.deleteNamespacedConfigMap(configMapName, namespace).execute();
+            log.info("Deleted Dockerfile ConfigMap: {}/{}", namespace, configMapName);
+        } catch (ApiException e) {
+            if (e.getCode() != 404) {
+                log.warn("Failed to delete Dockerfile ConfigMap {}/{}: code={}",
+                        namespace, configMapName, e.getCode());
             }
         }
     }
