@@ -3,6 +3,7 @@ package io.ten1010.dockerizerbackend.imagebuild.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -31,5 +32,9 @@ public class ImageBuildRequest {
 
     @Schema(description = "PVC 내 빌드 컨텍스트 서브 경로 (미지정 시 PVC 루트 사용)", example = "/my-project")
     private String buildContextSubPath;
+
+    @Positive
+    @Schema(description = "빌드 제한 시간(초). 미지정 시 컨트롤러 기본값(3600s) 적용", example = "3600")
+    private Integer buildTimeoutSeconds;
 
 }

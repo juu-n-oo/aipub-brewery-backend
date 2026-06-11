@@ -86,6 +86,7 @@ public class ImageBuildService {
                         .pushSecretRef(request.getPushSecretRef())
                         .buildContextPvc(request.getBuildContextPvc())
                         .buildContextSubPath(request.getBuildContextSubPath())
+                        .buildTimeoutSeconds(request.getBuildTimeoutSeconds())
                         .build())
                 .build();
 

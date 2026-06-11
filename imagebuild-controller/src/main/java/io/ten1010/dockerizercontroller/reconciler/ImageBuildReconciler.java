@@ -134,7 +134,7 @@ public class ImageBuildReconciler implements Reconciler {
                 statusUpdater.markSucceeded(cr, null);
                 log.info("ImageBuild succeeded: {}/{}", namespace, cr.getName());
             } else if (jobStatus.getFailed() != null && jobStatus.getFailed() > 0) {
-                String failMsg = extractFailureMessage(jobStatus);
+                String failMsg = extractFailureMessage(jobStatus, cr);
                 statusUpdater.markFailed(cr, failMsg);
                 log.info("ImageBuild failed: {}/{} - {}", namespace, cr.getName(), failMsg);
             }
@@ -172,11 +172,19 @@ public class ImageBuildReconciler implements Reconciler {
         }
     }
 
-    private String extractFailureMessage(V1JobStatus jobStatus) {
+    private String extractFailureMessage(V1JobStatus jobStatus, ImageBuildResource cr) {
         List<V1JobCondition> conditions = jobStatus.getConditions();
         if (conditions != null) {
             for (V1JobCondition condition : conditions) {
                 if ("Failed".equals(condition.getType()) && "True".equals(condition.getStatus())) {
+                    // 제한 시간 초과(activeDeadlineSeconds)로 kill 된 경우 — 빌드 에러(비정상 종료)와 구분해
+                    // "느려서 끊긴 것일 수 있음" 단서를 준다(slow-vs-hung 구분은 불가하나 timeout-vs-error 는 구분).
+                    if ("DeadlineExceeded".equals(condition.getReason())) {
+                        int minutes = jobFactory.resolveBuildTimeoutSeconds(cr) / 60;
+                        return String.format(
+                                "빌드가 제한 시간(%d분)을 초과하여 중단되었습니다. 이미지가 무거워 정상적으로 오래 걸리는 경우라면, 빌드 실행 시 제한 시간을 늘려 다시 시도하세요.",
+                                minutes);
+                    }
                     return condition.getMessage() != null ? condition.getMessage() : "Job failed";
                 }
             }

@@ -60,6 +60,7 @@ public class KanikoJobFactory {
                         .ownerReferences(List.of(ownerReference(cr))))
                 .spec(new V1JobSpec()
                         .backoffLimit(0)
+                        .activeDeadlineSeconds((long) resolveBuildTimeoutSeconds(cr))
                         .ttlSecondsAfterFinished(properties.getJobTtlSeconds())
                         .template(new V1PodTemplateSpec()
                                 .metadata(new V1ObjectMeta()
@@ -153,6 +154,18 @@ public class KanikoJobFactory {
                 .persistentVolumeClaim(new V1PersistentVolumeClaimVolumeSource()
                         .claimName(pvcName)
                         .readOnly(true));
+    }
+
+    /**
+     * Job 의 activeDeadlineSeconds 로 쓸 빌드 제한 시간(초)을 해석한다.
+     * CR spec.buildTimeoutSeconds 가 양수면 그 값을, 아니면 컨트롤러 기본값을 쓴다.
+     */
+    public int resolveBuildTimeoutSeconds(ImageBuildResource cr) {
+        Integer specTimeout = cr.getSpec() != null ? cr.getSpec().getBuildTimeoutSeconds() : null;
+        if (specTimeout != null && specTimeout > 0) {
+            return specTimeout;
+        }
+        return properties.getBuildTimeoutSeconds();
     }
 
     private V1OwnerReference ownerReference(ImageBuildResource cr) {

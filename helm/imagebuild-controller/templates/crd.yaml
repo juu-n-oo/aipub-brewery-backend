@@ -63,6 +63,10 @@ spec:
                 buildContextSubPath:
                   type: string
                   description: Sub-path within the PVC to use as build context root (optional, defaults to PVC root)
+                buildTimeoutSeconds:
+                  type: integer
+                  minimum: 1
+                  description: "Max build wall-clock time in seconds, applied as the Job's activeDeadlineSeconds. Defaults to the controller setting (3600s) when unset."
                 imageLabels:
                   type: object
                   additionalProperties:
