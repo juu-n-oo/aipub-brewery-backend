@@ -2,7 +2,7 @@
 set -e
 
 # ============================================================
-# Dockerizer Backend Deploy Script
+# ImageKit Backend Deploy Script
 # Builds images, pushes Kaniko executor to Harbor, and deploys
 # via Helm to the target Kubernetes cluster.
 # ============================================================
@@ -15,7 +15,7 @@ REGISTRY="${REGISTRY:-registry.ten1010.io:8443}"
 REGISTRY_PROJECT="${REGISTRY_PROJECT:-aipub}"
 IMAGE_BASE="${REGISTRY}/${REGISTRY_PROJECT}"
 
-BACKEND_IMAGE="${IMAGE_BASE}/dockerizer-backend"
+BACKEND_IMAGE="${IMAGE_BASE}/imagekit-backend"
 CONTROLLER_IMAGE="${IMAGE_BASE}/imagebuild-controller"
 BACKEND_TAG="${BACKEND_TAG:-0.1.0}"
 CONTROLLER_TAG="${CONTROLLER_TAG:-0.1.0}"
@@ -81,7 +81,7 @@ deploy_helm_chart() {
 # Main
 # ============================================================
 
-log "=== Dockerizer Backend Deploy Start ==="
+log "=== ImageKit Backend Deploy Start ==="
 
 # 1. Build and push application images
 build_and_push "backend-server" "${BACKEND_IMAGE}" "${BACKEND_TAG}"
@@ -94,7 +94,7 @@ push_kaniko_to_registry
 deploy_helm_chart "imagebuild-controller" \
   --set image.repository="${CONTROLLER_IMAGE}" \
   --set image.tag="${CONTROLLER_TAG}" \
-  --set applicationYaml.dockerizer.imagebuild.kanikoImage="${KANIKO_TARGET_IMAGE}"
+  --set applicationYaml.imagekit.imagebuild.kanikoImage="${KANIKO_TARGET_IMAGE}"
 
 # 4. Deploy backend-server
 deploy_helm_chart "backend-server" \
@@ -102,4 +102,4 @@ deploy_helm_chart "backend-server" \
   --set image.tag="${BACKEND_TAG}" \
   "$@"
 
-log "=== Dockerizer Backend Deploy Complete ==="
+log "=== ImageKit Backend Deploy Complete ==="

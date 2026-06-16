@@ -1,4 +1,4 @@
-# dockerizer-backend API 아키텍처
+# imagekit-backend API 아키텍처
 
 > 작성일: 2026-06-01  
 > 최종 수정: 2026-06-02  
@@ -9,7 +9,7 @@
 ## 1. 모듈 구조
 
 ```
-io.ten1010.dockerizerbackend/
+io.ten1010.imagekitbackend/
   aipub/                          ← AIPub 연동 (인증)
     config/
       AipubProperties              AIPub base URL 설정
@@ -54,8 +54,8 @@ authenticated: 나머지 모든 요청
 
 - CSRF 비활성화, stateless 세션
 - AipubAuthenticationFilter → UsernamePasswordAuthenticationFilter 앞에 등록
-- 인증 엔드포인트(login/logout/selfsubjectreviews)는 AIPub Ingress에서 AIPub으로 직접 라우팅되므로 dockerizer backend에 도달하지 않음
-- Dockerizer는 자체 Ingress를 생성하지 않으며, AIPub Ingress(`aipub-backend-adapter`)에 path가 추가되어 라우팅됨
+- 인증 엔드포인트(login/logout/selfsubjectreviews)는 AIPub Ingress에서 AIPub으로 직접 라우팅되므로 imagekit backend에 도달하지 않음
+- ImageKit는 자체 Ingress를 생성하지 않으며, AIPub Ingress(`aipub-backend-adapter`)에 path가 추가되어 라우팅됨
 
 ## 3. REST API
 
@@ -130,24 +130,24 @@ authenticated: 나머지 모든 요청
 ### application.yaml
 
 ```yaml
-dockerizer:
+imagekit:
   aipub:
-    base-url: ${DOCKERIZER_AIPUB_BASE_URL:http://localhost:9090}
+    base-url: ${IMAGEKIT_AIPUB_BASE_URL:http://localhost:9090}
 ```
 
 ### Helm
 
-- `DOCKERIZER_AIPUB_BASE_URL`: env-configmap.yaml에서 주입
+- `IMAGEKIT_AIPUB_BASE_URL`: env-configmap.yaml에서 주입
 - 기본값: `http://aipub-backend-gateway.aipub.svc.cluster.local:8080`
 
 ### Ingress 라우팅
 
-Dockerizer는 자체 Ingress를 생성하지 않는다. `install.sh`가 기존 AIPub Ingress(`aipub-backend-adapter`)에 `kubectl patch`로 다음 path를 추가한다:
+ImageKit는 자체 Ingress를 생성하지 않는다. `install.sh`가 기존 AIPub Ingress(`aipub-backend-adapter`)에 `kubectl patch`로 다음 path를 추가한다:
 
 | 경로 | 대상 서비스 |
 |------|-----------|
-| `/api/v1alpha1/dockerfiles` | dockerizer-backend :8080 |
-| `/api/v1alpha1/builds` | dockerizer-backend :8080 |
-| `/api/v1alpha1/volumes` | dockerizer-backend :8080 |
-| `/api/v1alpha1/registries` | dockerizer-backend :8080 |
-| `/dockerizer` | dockerizer-web :80 |
+| `/api/v1alpha1/dockerfiles` | imagekit-backend :8080 |
+| `/api/v1alpha1/builds` | imagekit-backend :8080 |
+| `/api/v1alpha1/volumes` | imagekit-backend :8080 |
+| `/api/v1alpha1/registries` | imagekit-backend :8080 |
+| `/imagekit` | imagekit-web :80 |

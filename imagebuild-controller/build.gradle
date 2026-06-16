@@ -2,7 +2,7 @@ plugins {
     id 'org.springframework.boot'
 }
 
-description = 'Dockerizer ImageBuild Controller - K8s Operator that watches ImageBuild CRs and manages Kaniko Jobs'
+description = 'ImageKit ImageBuild Controller - K8s Operator that watches ImageBuild CRs and manages Kaniko Jobs'
 
 dependencies {
     // Spring Boot

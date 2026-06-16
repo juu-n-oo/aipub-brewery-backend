@@ -1,4 +1,4 @@
-rootProject.name = 'dockerizer-backend'
+rootProject.name = 'imagekit-backend'
 
-include 'dockerizer-backend-server'
+include 'imagekit-backend-server'
 include 'imagebuild-controller'

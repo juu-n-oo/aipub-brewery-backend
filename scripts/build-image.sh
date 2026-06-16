@@ -10,7 +10,7 @@ REPOSITORY_BASE="${REPOSITORY_BASE:-aipub}"
 TAG="${TAG:-$(cd "${PROJECT_ROOT}" && git describe --tags --always --dirty 2>/dev/null || echo "dev")}"
 PLATFORM="${PLATFORM:-linux/amd64}"
 
-BACKEND_IMAGE="${REGISTRY}/${REPOSITORY_BASE}/dockerizer-backend:${TAG}"
+BACKEND_IMAGE="${REGISTRY}/${REPOSITORY_BASE}/imagekit-backend:${TAG}"
 CONTROLLER_IMAGE="${REGISTRY}/${REPOSITORY_BASE}/imagebuild-controller:${TAG}"
 
 #==============================================================================
@@ -18,18 +18,18 @@ CONTROLLER_IMAGE="${REGISTRY}/${REPOSITORY_BASE}/imagebuild-controller:${TAG}"
 #==============================================================================
 echo "==> Building JAR artifacts..."
 cd "${PROJECT_ROOT}"
-./gradlew clean :dockerizer-backend-server:bootJar :imagebuild-controller:bootJar -x test -x asciidoctor
+./gradlew clean :imagekit-backend-server:bootJar :imagebuild-controller:bootJar -x test -x asciidoctor
 echo "==> Gradle build complete"
 
 #==============================================================================
-# Docker Build — dockerizer-backend-server
+# Docker Build — imagekit-backend-server
 #==============================================================================
 echo ""
 echo "==> Building image: ${BACKEND_IMAGE}"
 docker build \
   --platform "${PLATFORM}" \
   -t "${BACKEND_IMAGE}" \
-  -f "${PROJECT_ROOT}/dockerizer-backend-server/Dockerfile" \
+  -f "${PROJECT_ROOT}/imagekit-backend-server/Dockerfile" \
   "${PROJECT_ROOT}"
 
 #==============================================================================

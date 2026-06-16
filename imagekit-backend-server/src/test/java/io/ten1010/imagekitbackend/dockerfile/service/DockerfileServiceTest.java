@@ -1,0 +1,183 @@
+package io.ten1010.imagekitbackend.dockerfile.service;
+
+import io.ten1010.imagekitbackend.common.exception.ForbiddenInstructionException;
+import io.ten1010.imagekitbackend.common.exception.ResourceNotFoundException;
+import io.ten1010.imagekitbackend.dockerfile.dto.*;
+import io.ten1010.imagekitbackend.dockerfile.entity.Dockerfile;
+import io.ten1010.imagekitbackend.dockerfile.entity.DockerfileRevision;
+import io.ten1010.imagekitbackend.dockerfile.repository.DockerfileRepository;
+import io.ten1010.imagekitbackend.dockerfile.repository.DockerfileRevisionRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.verify;
+
+@ExtendWith(MockitoExtension.class)
+class DockerfileServiceTest {
+
+    @Mock
+    private DockerfileRepository repository;
+
+    @Mock
+    private DockerfileRevisionRepository revisionRepository;
+
+    @Mock
+    private DockerfileMapper mapper;
+
+    @Mock
+    private DockerfileValidator validator;
+
+    @InjectMocks
+    private DockerfileService service;
+
+    private Dockerfile sampleEntity() {
+        return Dockerfile.builder()
+                .id(1L)
+                .project("pjw")
+                .username("joonwoo")
+                .name("pytorch-cuda12")
+                .description("PyTorch 2.1 기반 학습 환경")
+                .content("FROM pytorch/pytorch:2.1.0\nRUN pip install transformers")
+                .baseImage("pytorch/pytorch:2.1.0")
+                .createdAt(Instant.parse("2026-04-18T00:00:00Z"))
+                .updatedAt(Instant.parse("2026-04-18T00:00:00Z"))
+                .build();
+    }
+
+    private DockerfileResponse sampleResponse() {
+        return DockerfileResponse.builder()
+                .id(1L)
+                .project("pjw")
+                .username("joonwoo")
+                .name("pytorch-cuda12")
+                .description("PyTorch 2.1 기반 학습 환경")
+                .content("FROM pytorch/pytorch:2.1.0\nRUN pip install transformers")
+                .baseImage("pytorch/pytorch:2.1.0")
+                .createdAt(Instant.parse("2026-04-18T00:00:00Z"))
+                .updatedAt(Instant.parse("2026-04-18T00:00:00Z"))
+                .build();
+    }
+
+    @Test
+    void createValidDockerfile() {
+        DockerfileCreateRequest request = new DockerfileCreateRequest();
+        request.setProject("pjw");
+        request.setName("pytorch-cuda12");
+        request.setContent("FROM pytorch/pytorch:2.1.0\nRUN pip install transformers");
+        request.setBaseImage("pytorch/pytorch:2.1.0");
+
+        Dockerfile entity = sampleEntity();
+        willDoNothing().given(validator).validate(any());
+        given(mapper.toEntity(request)).willReturn(entity);
+        given(repository.save(entity)).willReturn(entity);
+        given(revisionRepository.save(any())).willReturn(DockerfileRevision.builder().id(1L).version(1).build());
+        given(mapper.toResponse(entity)).willReturn(sampleResponse());
+
+        DockerfileResponse result = service.create(request, "joonwoo");
+
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getProject()).isEqualTo("pjw");
+        verify(validator).validate(request.getContent());
+    }
+
+    @Test
+    void createDockerfileWithForbiddenInstructionThrows() {
+        DockerfileCreateRequest request = new DockerfileCreateRequest();
+        request.setContent("FROM ubuntu\nADD file.tar.gz /app/");
+
+        willThrow(new ForbiddenInstructionException(List.of("ADD")))
+                .given(validator).validate(any());
+
+        assertThatThrownBy(() -> service.create(request, "joonwoo"))
+                .isInstanceOf(ForbiddenInstructionException.class);
+    }
+
+    @Test
+    void getByIdReturnsDockerfile() {
+        Dockerfile entity = sampleEntity();
+        given(repository.findById(1L)).willReturn(Optional.of(entity));
+        given(mapper.toResponse(entity)).willReturn(sampleResponse());
+
+        DockerfileResponse result = service.getById(1L);
+
+        assertThat(result.getId()).isEqualTo(1L);
+    }
+
+    @Test
+    void getByIdNotFoundThrows() {
+        given(repository.findById(99L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getById(99L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("99");
+    }
+
+    @Test
+    void listByProjectReturnsResults() {
+        List<Dockerfile> entities = List.of(sampleEntity());
+        List<DockerfileResponse> responses = List.of(sampleResponse());
+        given(repository.findByProject("pjw")).willReturn(entities);
+        given(mapper.toResponseList(entities)).willReturn(responses);
+
+        List<DockerfileResponse> result = service.listByProject("pjw");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getProject()).isEqualTo("pjw");
+    }
+
+    @Test
+    void updateDockerfileContent() {
+        Dockerfile entity = sampleEntity();
+        DockerfileUpdateRequest request = new DockerfileUpdateRequest();
+        request.setName("pytorch-cuda12-v2");
+        request.setDescription("PyTorch 2.1 기반 학습 환경 (업데이트)");
+        request.setContent("FROM pytorch/pytorch:2.1.0\nRUN pip install transformers datasets");
+        request.setBaseImage("pytorch/pytorch:2.1.0-v2");
+
+        willDoNothing().given(validator).validate(any());
+        given(repository.findById(1L)).willReturn(Optional.of(entity));
+        given(revisionRepository.findTopByDockerfileIdOrderByVersionDesc(1L)).willReturn(Optional.empty());
+        given(revisionRepository.save(any())).willReturn(DockerfileRevision.builder().id(2L).version(1).build());
+        given(repository.save(entity)).willReturn(entity);
+        given(mapper.toResponse(entity)).willReturn(sampleResponse());
+
+        DockerfileResponse result = service.update(1L, request, "joonwoo");
+
+        assertThat(result).isNotNull();
+        assertThat(entity.getName()).isEqualTo("pytorch-cuda12-v2");
+        assertThat(entity.getDescription()).isEqualTo("PyTorch 2.1 기반 학습 환경 (업데이트)");
+        assertThat(entity.getBaseImage()).isEqualTo("pytorch/pytorch:2.1.0-v2");
+        verify(validator).validate(request.getContent());
+    }
+
+    @Test
+    void deleteExistingDockerfile() {
+        given(repository.existsById(1L)).willReturn(true);
+
+        service.delete(1L);
+
+        verify(repository).deleteById(1L);
+    }
+
+    @Test
+    void deleteNonExistentDockerfileThrows() {
+        given(repository.existsById(99L)).willReturn(false);
+
+        assertThatThrownBy(() -> service.delete(99L))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+}

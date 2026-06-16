@@ -1,0 +1,56 @@
+package io.ten1010.imagekitbackend.imagebuild.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.ten1010.imagekitbackend.imagebuild.dto.ImageBuildResponse;
+import io.ten1010.imagekitbackend.imagebuild.service.ImageBuildService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.util.List;
+
+// 빌드 트리거는 프론트가 k8sproxy 로 ImageBuild CR 을 직접 생성하므로 REST 트리거 엔드포인트는 제거됨.
+// (MCP triggerImageBuild 도구도 함께 제거됨 — 이 API 는 목록/상태/로그 조회만 제공한다.)
+@RestController
+@RequestMapping("/api/v1alpha1/builds")
+@RequiredArgsConstructor
+@Tag(name = "ImageBuild", description = "이미지 빌드 관리 (목록, 상태 조회, 로그)")
+public class ImageBuildController {
+
+    private final ImageBuildService service;
+
+    @GetMapping
+    @Operation(summary = "빌드 목록 조회", description = "프로젝트(namespace)의 ImageBuild 목록을 조회한다.")
+    public List<ImageBuildResponse> listBuilds(
+            @Parameter(description = "프로젝트 namespace", required = true) @RequestParam String project) {
+        return service.listBuilds(project);
+    }
+
+    @GetMapping("/{namespace}/{name}")
+    @Operation(summary = "빌드 상태 조회", description = "ImageBuild CR의 현재 상태를 조회한다.")
+    public ImageBuildResponse getBuildStatus(
+            @Parameter(description = "빌드가 실행된 namespace (= project)") @PathVariable String namespace,
+            @Parameter(description = "ImageBuild CR 이름") @PathVariable String name) {
+        return service.getBuildStatus(namespace, name);
+    }
+
+    @GetMapping(value = "/{namespace}/{name}/logs", produces = MediaType.TEXT_PLAIN_VALUE)
+    @Operation(summary = "빌드 로그 조회", description = "Kaniko 빌드 Pod의 로그를 일회성으로 조회한다. 빌드 완료 후 사용.")
+    public String getBuildLogs(
+            @Parameter(description = "빌드가 실행된 namespace (= project)") @PathVariable String namespace,
+            @Parameter(description = "ImageBuild CR 이름") @PathVariable String name) {
+        return service.getBuildLogs(namespace, name);
+    }
+
+    @GetMapping(value = "/{namespace}/{name}/logs/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "빌드 로그 실시간 스트리밍", description = "Kaniko 빌드 Pod의 로그를 SSE로 실시간 스트리밍한다. 빌드 진행 중 사용. 완료 시 'done' 이벤트 발송.")
+    public SseEmitter streamBuildLogs(
+            @Parameter(description = "빌드가 실행된 namespace (= project)") @PathVariable String namespace,
+            @Parameter(description = "ImageBuild CR 이름") @PathVariable String name) {
+        return service.streamBuildLogs(namespace, name);
+    }
+
+}

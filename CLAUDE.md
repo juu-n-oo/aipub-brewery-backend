@@ -1,8 +1,8 @@
-# Dockerizer (가칭) 서비스 기획서
+# ImageKit (가칭) 서비스 기획서
 
 > 작성일: 2026-04-17  
 > 버전: v0.3 (MVP 빌드 컨텍스트 제약 확정)  
-> 프로젝트 코드네임: **Dockerizer**
+> 프로젝트 코드네임: **ImageKit**
 
 ---
 
@@ -20,7 +20,7 @@ AIPub은 쿠버네티스 기반의 ML 개발 플랫폼으로, Workspace, Operati
 
 ### 1.2 서비스 목적
 
-AIPub 플랫폼 내에 **웹 기반 Dockerfile 편집 및 이미지 빌드/관리 서비스(Dockerizer)**를 구축하여, 사용자가 로컬 환경 없이도 이미지를 설계·빌드·배포할 수 있도록 한다.
+AIPub 플랫폼 내에 **웹 기반 Dockerfile 편집 및 이미지 빌드/관리 서비스(ImageKit)**를 구축하여, 사용자가 로컬 환경 없이도 이미지를 설계·빌드·배포할 수 있도록 한다.
 
 ### 1.3 기대 효과
 
@@ -92,8 +92,8 @@ AIPub 플랫폼 내에 **웹 기반 Dockerfile 편집 및 이미지 빌드/관�
 
 | 구성요소 | 설명 |
 |---|---|
-| **dockerizer-web** | 신규 프론트엔드. Dockerfile 에디터, 빌드 트리거, 빌드 결과/로그 조회 UI. |
-| **aipub-web-server** | 기존 AIPub 백엔드. Dockerizer API가 추가되어 Dockerfile 저장 및 k8s CR 생성을 담당. |
+| **imagekit-web** | 신규 프론트엔드. Dockerfile 에디터, 빌드 트리거, 빌드 결과/로그 조회 UI. |
+| **aipub-web-server** | 기존 AIPub 백엔드. ImageKit API가 추가되어 Dockerfile 저장 및 k8s CR 생성을 담당. |
 | **ImageBuild CR + Controller** | 신규 CR. 컨트롤러가 CR을 watch하여 Kaniko 기반 k8s Job을 생성/감시. |
 | **Kaniko Job (Pod)** | 실제 이미지 빌드 및 Harbor push 수행. |
 | **Harbor (기존 ImageHub)** | Base 이미지 제공 및 빌드 산출물 저장. |
@@ -102,7 +102,7 @@ AIPub 플랫폼 내에 **웹 기반 Dockerfile 편집 및 이미지 빌드/관�
 
 ```
 [User Browser]
-  └─ dockerizer-web
+  └─ imagekit-web
       ├─ Dockerfile 작성/저장 요청
       │   └─ aipub-web-server: Dockerfile 저장
       │
@@ -145,7 +145,7 @@ AIPub 플랫폼 내에 **웹 기반 Dockerfile 편집 및 이미지 빌드/관�
 
 ### 6.1 MVP 핵심 요구사항
 
-**(1) dockerizer-web**
+**(1) imagekit-web**
 - Dockerfile을 UI에서 작성할 수 있다.
 - 작성 중 `COPY` / `ADD` 등 MVP에서 미지원되는 지시자가 포함되면 UI 레벨에서 경고를 표시한다.
 - 작성한 Dockerfile을 저장할 수 있다.
@@ -237,7 +237,7 @@ AIPub 플랫폼 내에 **웹 기반 Dockerfile 편집 및 이미지 빌드/관�
 
 ### 7.6 AIPub 생태계 연계 고도화
 
-- **AIPub Volume / dockerizer 볼륨 연계**: 빌드 컨텍스트(소스 코드, 리소스)를 AIPub Volume에서 로드.
+- **AIPub Volume / imagekit 볼륨 연계**: 빌드 컨텍스트(소스 코드, 리소스)를 AIPub Volume에서 로드.
 - **SFTPServer 연계**: SFTP로 업로드한 파일을 빌드 컨텍스트로 활용.
 - **ChainJob 파이프라인 편입**: 빌드 Job을 ChainJob의 한 단계로 사용(빌드 → 학습 → 평가).
 
@@ -255,7 +255,7 @@ AIPub 플랫폼 내에 **웹 기반 Dockerfile 편집 및 이미지 빌드/관�
 
 ## 9. 성공 지표 (MVP 이후 측정)
 
-- 로컬 빌드 대비 Dockerizer 기반 빌드 채택률 (Project 단위)
+- 로컬 빌드 대비 ImageKit 기반 빌드 채택률 (Project 단위)
 - 빌드 평균 소요 시간, 성공률
 - Workspace commit 사용량 감소 추이
-- Dockerizer로 생성된 이미지가 실제 AIPub 워크로드(Workspace/Job/Operation)에서 사용된 비율
+- ImageKit로 생성된 이미지가 실제 AIPub 워크로드(Workspace/Job/Operation)에서 사용된 비율

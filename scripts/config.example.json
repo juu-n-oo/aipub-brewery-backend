@@ -22,6 +22,6 @@
   },
 
   "database": {
-    "name": "dockerizer"
+    "name": "imagekit"
   }
 }

@@ -1,13 +1,13 @@
-# Kubernetes Integration — Dockerizer
+# Kubernetes Integration — ImageKit
 
 > 작성일: 2026-04-18  
-> Dockerizer가 연동하는 Kubernetes 리소스에 대한 정리
+> ImageKit가 연동하는 Kubernetes 리소스에 대한 정리
 
 ---
 
-## 1. ImageBuild CR (Dockerizer 자체 CRD)
+## 1. ImageBuild CR (ImageKit 자체 CRD)
 
-Dockerizer가 정의하고 관리하는 Custom Resource.
+ImageKit가 정의하고 관리하는 Custom Resource.
 
 - **Group**: `aipub.ten1010.io`
 - **Version**: `v1alpha1`
@@ -88,10 +88,10 @@ AIPubVolume 생성 시 PVC를 마운트한 **busybox Pod이 자동 생성**되�
 - **Controlled By**: `AIPubVolume/{volumeName}`
 - **라벨**: `aipub.ten1010.io/workload-kind: AIPubVolume`, `aipubvolumes.aipub.ten1010.io/owner: {volumeName}`
 
-이 Pod은 항상 Running 상태이므로, Dockerizer에서 **`kubectl exec`로 직접 파일 목록을 조회**할 수 있다.
+이 Pod은 항상 Running 상태이므로, ImageKit에서 **`kubectl exec`로 직접 파일 목록을 조회**할 수 있다.
 `AIPubVolume.status.pvcName`이 곧 exec 대상 Pod 이름이다.
 
-### Dockerizer에서의 활용
+### ImageKit에서의 활용
 
 **파일 브라우저**: 상주 Pod에 `find` 명령을 exec하여 Volume 내 파일/디렉토리 목록을 조회. 프론트엔드에서 COPY 대상 파일을 선택하는 UI에 사용.
 
@@ -100,7 +100,7 @@ AIPubVolume 생성 시 PVC를 마운트한 **busybox Pod이 자동 생성**되�
 - PVC가 `ReadWriteMany`이므로 기존 워크로드(Workspace 등)와 Kaniko Pod이 동시 마운트 가능
 - AIPubVolume의 `status.pvcName`으로 마운트할 PVC 이름 및 exec 대상 Pod 이름을 resolve
 
-### Dockerizer 조회 API
+### ImageKit 조회 API
 
 ```
 GET /api/v1/volumes/{namespace}                              — Volume 목록
@@ -135,7 +135,7 @@ Kaniko Pod에서는 이 Secret의 `.dockerconfigjson`을 `/kaniko/.docker/config
 - **Kind**: `Project`
 - **Scope**: Cluster
 
-Project CR은 Kubernetes namespace와 1:1 대응된다. Dockerizer의 모든 리소스(Dockerfile, ImageBuild, Volume 등)는 Project namespace에 귀속된다.
+Project CR은 Kubernetes namespace와 1:1 대응된다. ImageKit의 모든 리소스(Dockerfile, ImageBuild, Volume 등)는 Project namespace에 귀속된다.
 
 ### 관련 바인딩
 
@@ -154,4 +154,4 @@ Project CR은 Kubernetes namespace와 1:1 대응된다. Dockerizer의 모든 리
 - **Kind**: `ImageHub`
 - **Scope**: Cluster
 
-Harbor 레지스트리 프로젝트와 연동된 CR. Dockerizer에서 Base 이미지 소스 및 빌드 결과물 push 대상으로 사용된다.
+Harbor 레지스트리 프로젝트와 연동된 CR. ImageKit에서 Base 이미지 소스 및 빌드 결과물 push 대상으로 사용된다.

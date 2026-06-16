@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: imagekit-backend
+  ai:
+    mcp:
+      server:
+        name: imagekit
+        version: 1.0.0
+        type: SYNC
+        sse-message-endpoint: /mcp/messages
+  datasource:
+    url: jdbc:h2:mem:imagekit
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+  servlet:
+    multipart:
+      # Volume 파일 업로드(빌드 컨텍스트)용. ML 리소스가 클 수 있어 넉넉히 설정한다.
+      max-file-size: 2GB
+      max-request-size: 2GB
+
+server:
+  port: 8080
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui
+
+imagekit:
+  aipub:
+    base-url: http://localhost:9090
+    # Dockerfile 전체 조회(all=true)를 허용할 관리자 role (selfsubjectreviews roles 와 대조)
+    admin-roles:
+      - aipub-admin
+  kubernetes:
+    verify-ssl: false
+    kube-config:
+      mode: FILE
+      kube-config-path: ${HOME}/.kube/config
+  dockerfile:
+    forbidden-instructions:
+      - ADD
+  volume:
+    client-mode: K8S  # K8S: Kubernetes API 직접 사용, PROXY: AIPub k8s proxy 경유
+    proxy-base-url: https://aipub.cluster7.idc1.ten1010.io
+    pvc-mount-path: /data  # AIPubVolume Pod 내 PVC 마운트 경로 (브라우저가 이 경로를 PVC 루트로 취급)
+  opensearch:
+    enabled: false  # 로컬에서는 빌드 로그 OpenSearch fallback 비활성

@@ -1,8 +1,8 @@
 spring:
   application:
-    name: dockerizer-controller
+    name: imagekit-controller
 
-dockerizer:
+imagekit:
   kubernetes:
     verify-ssl: false
     kube-config:

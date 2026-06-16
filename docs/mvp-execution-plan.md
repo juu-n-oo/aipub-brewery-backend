@@ -1,7 +1,7 @@
-# Dockerizer Backend - MVP 실행계획
+# ImageKit Backend - MVP 실행계획
 
 > 작성일: 2026-04-17 | 최종 업데이트: 2026-04-20  
-> 프로젝트: dockerizer-backend  
+> 프로젝트: imagekit-backend  
 > 기술 스택: Spring Boot 4.0.5, Java 21, JPA, Kubernetes Java Client (official) 24.0.0, H2/PostgreSQL
 
 ---
@@ -9,11 +9,11 @@
 ## 1. 프로젝트 구조
 
 ```
-dockerizer-backend/                      # Gradle 멀티모듈 루트
+imagekit-backend/                      # Gradle 멀티모듈 루트
 ├── backend-server/                         # 모듈 1: REST API 서버
-│   └── src/main/java/io/ten1010/dockerizerbackend/
+│   └── src/main/java/io/ten1010/imagekitbackend/
 │       ├── common/
-│       │   ├── config/                     #   K8sProperties, KubernetesConfiguration, DockerizerProperties
+│       │   ├── config/                     #   K8sProperties, KubernetesConfiguration, ImageKitProperties
 │       │   │                               #   OpenApiConfiguration, McpServerConfiguration
 │       │   └── exception/                  #   글로벌 예외 처리 (ProblemDetail 기반)
 │       ├── dockerfile/
@@ -37,7 +37,7 @@ dockerizer-backend/                      # Gradle 멀티모듈 루트
 │           ├── dto/                        #   RegistryImage, ImageSearchResponse, ImageTagsResponse
 │           └── service/                    #   NgcRegistryService, HuggingfaceRegistryService
 ├── imagebuild-controller/                  # 모듈 2: K8s Operator
-│   └── src/main/java/io/ten1010/dockerizercontroller/
+│   └── src/main/java/io/ten1010/imagekitcontroller/
 │       ├── config/                         #   K8sProperties, KubernetesConfiguration, ControllerProperties
 │       ├── cr/                             #   ImageBuildConstants, Spec, Status, Resource, ResourceList
 │       └── reconciler/                     #   ImageBuildWatcher, Reconciler, KanikoJobFactory
@@ -176,7 +176,7 @@ dockerizer-backend/                      # Gradle 멀티모듈 루트
 - [x] AipubVolumeClient 인터페이스 + 2개 구현체
   - `K8sAipubVolumeClient` — K8s API 직접 사용 (기본)
   - `ProxyAipubVolumeClient` — AIPub k8s proxy 경유
-  - `dockerizer.volume.client-mode` 설정으로 전환 (K8S / PROXY)
+  - `imagekit.volume.client-mode` 설정으로 전환 (K8S / PROXY)
 - [x] RestDocs 테스트 (3개 — 목록, 루트 조회, 하위 디렉토리 조회)
 
 ### Phase 3-F: 외부 레지스트리 프록시 ✅ 완료
@@ -201,7 +201,7 @@ dockerizer-backend/                      # Gradle 멀티모듈 루트
 - [x] Helm 차트 정비: `helm/backend-server`, `helm/imagebuild-controller`
 - [x] `KubernetesConfiguration`: IN_CLUSTER 모드일 때 서비스 어카운트 토큰을 `setApiKey`/`setApiKeyPrefix("Bearer")`로 명시 설정 (WebSocket 인증 누락 대응)
 - [x] `ImageBuildStatusUpdater`: `PatchUtils.patch()` 사용으로 `application/merge-patch+json` 적용 (415 에러 해결)
-- [x] `JobWatcher` 추가: `app.kubernetes.io/managed-by=dockerizer-controller` 라벨이 붙은 Job의 MODIFIED 이벤트 감시 → ImageBuild CR reconcile 트리거
+- [x] `JobWatcher` 추가: `app.kubernetes.io/managed-by=imagekit-controller` 라벨이 붙은 Job의 MODIFIED 이벤트 감시 → ImageBuild CR reconcile 트리거
 - [x] 빌드 로그 조회: `job-name` label selector로 Pod를 resolve 후 로그 조회 (Job 이름 ≠ Pod 이름)
 - [x] Kaniko 컨테이너 args에 `--insecure`, `--skip-tls-verify` 플래그 추가 (Harbor self-signed 인증서 대응, MVP 한정)
 - [x] ClusterRole RBAC 최종 정의 (섹션 4.9 참조)
@@ -210,7 +210,7 @@ dockerizer-backend/                      # Gradle 멀티모듈 루트
 
 - [ ] 입력 데이터 추가 검증 (targetImage/tag 형식, content 크기 제한)
 - [ ] API 응답 페이지네이션 지원
-- [ ] CORS 설정 (dockerizer-web 연동용)
+- [ ] CORS 설정 (imagekit-web 연동용)
 
 ### Phase 5: 인증/인가 연동
 
@@ -232,7 +232,7 @@ dockerizer-backend/                      # Gradle 멀티모듈 루트
 
 - `ADD` 지시자만 reject (COPY는 빌드 컨텍스트 파일 참조를 위해 허용)
 - 정규식 기반 라인별 검사: `^\s*ADD\s`
-- 설정 외부화: `dockerizer.dockerfile.forbidden-instructions`
+- 설정 외부화: `imagekit.dockerfile.forbidden-instructions`
 
 ### 4.2 데이터 모델
 
@@ -285,7 +285,7 @@ AIPubVolume 생성 시 자동 생성되는 상주 Pod (busybox, sleep infinity)�
 ### 4.5 AipubVolumeClient 전략 패턴
 
 ```yaml
-dockerizer:
+imagekit:
   volume:
     client-mode: K8S    # K8S: CustomObjectsApi 직접 | PROXY: AIPub k8s proxy 경유
 ```
@@ -303,7 +303,7 @@ Volume CR 조회는 K8S/PROXY 전환 가능, Pod exec는 항상 K8s API 직접 �
 ### 4.7 외부 레지스트리
 
 ```yaml
-dockerizer:
+imagekit:
   registry:
     ngc:
       enabled: true

@@ -64,7 +64,7 @@ applicationYaml:
   spring:
     profiles:
       active: prod
-  dockerizer:
+  imagekit:
     kubernetes:
       verifySsl: true
       kubeConfig:
@@ -74,7 +74,7 @@ applicationYaml:
       jobTtlSeconds: 3600  # 빌드 Job/Pod 완료 후 GC 까지 시간(초). 이후 로그는 OpenSearch fallback 으로만 조회
   logging:
     level:
-      dockerizer: ""  # ## HELM installer ##
+      imagekit: ""  # ## HELM installer ##
   management:
     server:
       port: &managementPort 8082

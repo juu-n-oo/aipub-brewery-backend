@@ -1,0 +1,26 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "imagekit-backend.fullname" . }}
+  labels:
+    {{- include "imagekit-backend.labels" . | nindent 4 }}
+rules:
+  # ImageBuild CR operations
+  - apiGroups: ["aipub.ten1010.io"]
+    resources: ["imagebuilds"]
+    verbs: ["get", "list", "create"]
+  # Pod access (get for exec prerequisite, log for Kaniko build logs)
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  # Pod exec (Volume file browsing via AIPubVolume busybox Pod)
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["get", "create"]
+  # AIPubVolume CR read (Volume browsing)
+  - apiGroups: ["aipub.ten1010.io"]
+    resources: ["aipubvolumes"]
+    verbs: ["get", "list"]

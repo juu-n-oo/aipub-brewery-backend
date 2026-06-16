@@ -1,4 +1,4 @@
-# Dockerizer Backend
+# ImageKit Backend
 
 AIPub 플랫폼의 웹 기반 Dockerfile 편집 및 이미지 빌드/관리 서비스 백엔드.
 
@@ -7,7 +7,7 @@ AIPub 플랫폼의 웹 기반 Dockerfile 편집 및 이미지 빌드/관리 서�
 이 프로젝트는 Gradle 멀티모듈로 구성되며, 두 개의 독립 실행 가능한 Spring Boot 애플리케이션으로 이루어져 있다.
 
 ```
-dockerizer-backend/
+imagekit-backend/
 ├── backend-server/            # REST API 서버
 ├── imagebuild-controller/     # K8s Operator (ImageBuild Controller)
 └── k8s/                       # K8s 매니페스트 (CRD 등)
@@ -69,8 +69,8 @@ kubectl apply -f k8s/imagebuild-crd.yaml
 
 AIPub Ingress(`aipub-backend-adapter`)의 sub path로 라우팅된다.
 
-- **프론트엔드**: `https://aipub.cluster10.idc1.ten1010.io/dockerizer`
-- **API**: `/api/v1alpha1/{dockerfiles,builds,volumes,registries}` → dockerizer-backend
+- **프론트엔드**: `https://aipub.cluster10.idc1.ten1010.io/imagekit`
+- **API**: `/api/v1alpha1/{dockerfiles,builds,volumes,registries}` → imagekit-backend
 - 자체 Ingress를 생성하지 않으며, `install.sh`가 기존 AIPub Ingress에 `kubectl patch`로 path를 추가한다.
 
 ```bash
@@ -82,7 +82,7 @@ sudo ./scripts/install.sh --config scripts/config.json
 
 ```
 [User Browser]
-  └─ dockerizer-web (프론트엔드, /dockerizer sub path)
+  └─ imagekit-web (프론트엔드, /imagekit sub path)
       │
       └─ AIPub Ingress (aipub-backend-adapter)
           │

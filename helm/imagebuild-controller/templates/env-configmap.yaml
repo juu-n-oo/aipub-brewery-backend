@@ -7,17 +7,17 @@ metadata:
     {{- include "imagebuild-controller.labels" . | nindent 4 }}
 data:
   SPRING_PROFILES_ACTIVE: {{ .Values.applicationYaml.spring.profiles.active | quote }}
-  DOCKERIZER_KUBERNETES_VERIFY_SSL: {{ .Values.applicationYaml.dockerizer.kubernetes.verifySsl | quote }}
-  DOCKERIZER_KUBERNETES_KUBE_CONFIG_MODE: {{ .Values.applicationYaml.dockerizer.kubernetes.kubeConfig.mode | quote }}
-  DOCKERIZER_IMAGEBUILD_KANIKO_IMAGE: {{ .Values.applicationYaml.dockerizer.imagebuild.kanikoImage | quote }}
-  DOCKERIZER_IMAGEBUILD_JOB_TTL_SECONDS: {{ .Values.applicationYaml.dockerizer.imagebuild.jobTtlSeconds | quote }}
+  IMAGEKIT_KUBERNETES_VERIFY_SSL: {{ .Values.applicationYaml.imagekit.kubernetes.verifySsl | quote }}
+  IMAGEKIT_KUBERNETES_KUBE_CONFIG_MODE: {{ .Values.applicationYaml.imagekit.kubernetes.kubeConfig.mode | quote }}
+  IMAGEKIT_IMAGEBUILD_KANIKO_IMAGE: {{ .Values.applicationYaml.imagekit.imagebuild.kanikoImage | quote }}
+  IMAGEKIT_IMAGEBUILD_JOB_TTL_SECONDS: {{ .Values.applicationYaml.imagekit.imagebuild.jobTtlSeconds | quote }}
   MANAGEMENT_SERVER_PORT: {{ .Values.applicationYaml.management.server.port | quote }}
   MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: {{ .Values.applicationYaml.management.endpoint.health.probes.enabled | quote }}
   MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: {{ .Values.applicationYaml.management.endpoints.web.exposure.include | quote }}
   MANAGEMENT_HEALTH_LIVENESSSTATE_ENABLED: {{ .Values.applicationYaml.management.health.livenessstate.enabled | quote }}
   MANAGEMENT_HEALTH_READINESSSTATE_ENABLED: {{ .Values.applicationYaml.management.health.readinessstate.enabled | quote }}
-  {{- if .Values.applicationYaml.logging.level.dockerizer }}
-  LOGGING_LEVEL_DOCKERIZER: {{ .Values.applicationYaml.logging.level.dockerizer | quote }}
+  {{- if .Values.applicationYaml.logging.level.imagekit }}
+  LOGGING_LEVEL_IMAGEKIT: {{ .Values.applicationYaml.logging.level.imagekit | quote }}
   {{- end }}
   {{- if eq (.Values.agent.datadog | toString) "true" }}
   JAVA_TOOL_OPTIONS: {{ .Values.agent.javaToolOptions | quote }}

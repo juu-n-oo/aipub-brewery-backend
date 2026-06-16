@@ -3,7 +3,7 @@
 set -e  # Exit on error
 
 #==============================================================================
-# Dockerizer Install Script
+# ImageKit Install Script
 # AIPub 설치 패턴과 동일한 방식으로 Helm 차트를 배포한다.
 # 사용법: sudo ./install.sh --config config.json [--skip-confirmation]
 #==============================================================================
@@ -235,7 +235,7 @@ BACKEND_TAG=$(${YQ_COMMAND} -r '.version.backend_tag' "$CONFIG_FILE")
 CONTROLLER_TAG=$(${YQ_COMMAND} -r '.version.controller_tag' "$CONFIG_FILE")
 KANIKO_VERSION=$(${YQ_COMMAND} -r '.version.kaniko_version // "v1.24.0"' "$CONFIG_FILE")
 
-BACKEND_IMAGE="${IMAGE_BASE}/dockerizer-backend"
+BACKEND_IMAGE="${IMAGE_BASE}/imagekit-backend"
 CONTROLLER_IMAGE="${IMAGE_BASE}/imagebuild-controller"
 KANIKO_IMAGE="${IMAGE_BASE}/kaniko-executor:${KANIKO_VERSION}"
 
@@ -252,7 +252,7 @@ LOGGING_LEVEL=$(${YQ_COMMAND} -r '.application.logging_level // "INFO"' "$CONFIG
 JOB_TTL_SECONDS=$(${YQ_COMMAND} -r '.application.job_ttl_seconds // "3600"' "$CONFIG_FILE")
 
 # Database
-DB_NAME=$(${YQ_COMMAND} -r '.database.name // "dockerizer"' "$CONFIG_FILE")
+DB_NAME=$(${YQ_COMMAND} -r '.database.name // "imagekit"' "$CONFIG_FILE")
 
 BACKUP_BASE_DIR="${SCRIPT_DIR}/backups/${NAMESPACE}/$(date +%Y%m%d_%H%M%S)"
 
@@ -286,7 +286,7 @@ log_info "DB Password: ${DB_PASSWORD:0:5}***"
 OPENSEARCH_MONITORING_NS="aipub-monitoring"
 OPENSEARCH_CREDS_SECRET="opensearch-cluster-master-credentials"
 OPENSEARCH_CERTS_SECRET="opensearch-cluster-master-certs"
-OPENSEARCH_BACKEND_CERTS_SECRET="dockerizer-backend-opensearch-certs"
+OPENSEARCH_BACKEND_CERTS_SECRET="imagekit-backend-opensearch-certs"
 OPENSEARCH_ENABLED=false
 OPENSEARCH_USERNAME=""
 OPENSEARCH_PASSWORD=""
@@ -329,7 +329,7 @@ log_info "  Datadog:      ${DATA_DOG_ENABLED}"
 log_info "=========================================="
 log_info "  0. Database setup (CREATE DATABASE ${DB_NAME})"
 log_info "  1. imagebuild-controller (${CONTROLLER_TAG})"
-log_info "  2. dockerizer-backend        (${BACKEND_TAG})"
+log_info "  2. imagekit-backend        (${BACKEND_TAG})"
 log_info "  3. AIPub Ingress patch       (${AIPUB_INGRESS_NAME})"
 log_info "=========================================="
 log_info ""
@@ -350,15 +350,15 @@ if [ "$BUILD_IMAGES" = true ]; then
 
     cd "${SCRIPT_DIR}/.."
     log_info "Building JAR artifacts..."
-    ./gradlew clean :dockerizer-backend-server:bootJar :imagebuild-controller:bootJar -x test -x asciidoctor
+    ./gradlew clean :imagekit-backend-server:bootJar :imagebuild-controller:bootJar -x test -x asciidoctor
 
-    BACKEND_IMAGE_FULL="${IMAGE_BASE}/dockerizer-backend:${BACKEND_TAG}"
+    BACKEND_IMAGE_FULL="${IMAGE_BASE}/imagekit-backend:${BACKEND_TAG}"
     CONTROLLER_IMAGE_FULL="${IMAGE_BASE}/imagebuild-controller:${CONTROLLER_TAG}"
 
     log_info "Building image: ${BACKEND_IMAGE_FULL}"
     sudo docker build --platform linux/amd64 \
       -t "${BACKEND_IMAGE_FULL}" \
-      -f dockerizer-backend-server/Dockerfile .
+      -f imagekit-backend-server/Dockerfile .
 
     log_info "Building image: ${CONTROLLER_IMAGE_FULL}"
     sudo docker build --platform linux/amd64 \
@@ -423,15 +423,15 @@ log_step "Deploying imagebuild-controller"
 deploy_helm_chart "imagebuild-controller" \
   --set image.repository="${CONTROLLER_IMAGE}" \
   --set image.tag="${CONTROLLER_TAG}" \
-  --set applicationYaml.dockerizer.imagebuild.kanikoImage="${KANIKO_IMAGE}" \
-  --set applicationYaml.dockerizer.imagebuild.jobTtlSeconds="${JOB_TTL_SECONDS}" \
-  --set applicationYaml.logging.level.dockerizer="${LOGGING_LEVEL}" \
+  --set applicationYaml.imagekit.imagebuild.kanikoImage="${KANIKO_IMAGE}" \
+  --set applicationYaml.imagekit.imagebuild.jobTtlSeconds="${JOB_TTL_SECONDS}" \
+  --set applicationYaml.logging.level.imagekit="${LOGGING_LEVEL}" \
   --set agent.datadog="${DATA_DOG_ENABLED}"
 
 #==============================================================================
-# Deploy: dockerizer-backend
+# Deploy: imagekit-backend
 #==============================================================================
-log_step "Deploying dockerizer-backend"
+log_step "Deploying imagekit-backend"
 
 # OpenSearch fallback 활성화 시 --set 인자 + CA 볼륨 와이어링을 동적으로 구성한다.
 # values.yaml 의 기본 volumes/volumeMounts(ca-certs) 를 보존하면서 opensearch-certs 를 추가하기 위해
@@ -439,28 +439,28 @@ log_step "Deploying dockerizer-backend"
 OPENSEARCH_SET_ARGS=()
 if [ "${OPENSEARCH_ENABLED}" = true ]; then
     OPENSEARCH_SET_ARGS=(
-        --set applicationYaml.dockerizer.opensearch.enabled=true
-        --set applicationYaml.dockerizer.opensearch.url="${OPENSEARCH_URL}"
-        --set applicationYaml.dockerizer.opensearch.username="${OPENSEARCH_USERNAME}"
-        --set applicationYaml.dockerizer.opensearch.password="${OPENSEARCH_PASSWORD}"
-        --set applicationYaml.dockerizer.opensearch.caCertPath="/opensearch-certs/ca.crt"
+        --set applicationYaml.imagekit.opensearch.enabled=true
+        --set applicationYaml.imagekit.opensearch.url="${OPENSEARCH_URL}"
+        --set applicationYaml.imagekit.opensearch.username="${OPENSEARCH_USERNAME}"
+        --set applicationYaml.imagekit.opensearch.password="${OPENSEARCH_PASSWORD}"
+        --set applicationYaml.imagekit.opensearch.caCertPath="/opensearch-certs/ca.crt"
         --set-json volumes="[{\"name\":\"ca-certs\",\"secret\":{\"secretName\":\"custom-ca-certs\"}},{\"name\":\"opensearch-certs\",\"secret\":{\"secretName\":\"${OPENSEARCH_BACKEND_CERTS_SECRET}\"}}]"
         --set-json volumeMounts="[{\"name\":\"ca-certs\",\"mountPath\":\"/certificates\",\"readOnly\":true},{\"name\":\"opensearch-certs\",\"mountPath\":\"/opensearch-certs\",\"readOnly\":true}]"
     )
 fi
 
-deploy_helm_chart "dockerizer-backend" \
+deploy_helm_chart "imagekit-backend" \
   --set image.repository="${BACKEND_IMAGE}" \
   --set image.tag="${BACKEND_TAG}" \
   --set applicationYaml.spring.datasource.url="jdbc:postgresql://harbor-database.${NAMESPACE}.svc.cluster.local:5432/${DB_NAME}" \
   --set applicationYaml.spring.datasource.username="aipub" \
   --set applicationYaml.spring.datasource.password="${DB_PASSWORD}" \
-  --set applicationYaml.logging.level.dockerizer="${LOGGING_LEVEL}" \
+  --set applicationYaml.logging.level.imagekit="${LOGGING_LEVEL}" \
   --set agent.datadog="${DATA_DOG_ENABLED}" \
   "${OPENSEARCH_SET_ARGS[@]}"
 
 #==============================================================================
-# Patch AIPub Ingress: add Dockerizer routing paths
+# Patch AIPub Ingress: add ImageKit routing paths
 #==============================================================================
 log_step "Patching AIPub Ingress (${AIPUB_INGRESS_NAME})"
 
@@ -475,7 +475,7 @@ patch_aipub_ingress() {
         -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>/dev/null)
 
     if echo "${existing_paths}" | grep -q "/api/v1alpha1/dockerfiles"; then
-        log_info "Dockerizer paths already present in AIPub Ingress, skipping patch"
+        log_info "ImageKit paths already present in AIPub Ingress, skipping patch"
         return 0
     fi
 
@@ -485,28 +485,28 @@ patch_aipub_ingress() {
     log_info "Backing up current AIPub Ingress..."
     sudo kubectl get ingress -n ${NAMESPACE} ${AIPUB_INGRESS_NAME} -o yaml > "${backup_dir}/before.yaml"
 
-    # Dockerizer API paths — must be inserted before the generic /api path
-    # so that specific dockerizer resource paths take priority.
+    # ImageKit API paths — must be inserted before the generic /api path
+    # so that specific imagekit resource paths take priority.
     local PATCH='[
       {"op":"add","path":"/spec/rules/0/http/paths/-","value":{
         "path":"/api/v1alpha1/dockerfiles","pathType":"Prefix",
-        "backend":{"service":{"name":"dockerizer-backend","port":{"number":8080}}}
+        "backend":{"service":{"name":"imagekit-backend","port":{"number":8080}}}
       }},
       {"op":"add","path":"/spec/rules/0/http/paths/-","value":{
         "path":"/api/v1alpha1/builds","pathType":"Prefix",
-        "backend":{"service":{"name":"dockerizer-backend","port":{"number":8080}}}
+        "backend":{"service":{"name":"imagekit-backend","port":{"number":8080}}}
       }},
       {"op":"add","path":"/spec/rules/0/http/paths/-","value":{
         "path":"/api/v1alpha1/volumes","pathType":"Prefix",
-        "backend":{"service":{"name":"dockerizer-backend","port":{"number":8080}}}
+        "backend":{"service":{"name":"imagekit-backend","port":{"number":8080}}}
       }},
       {"op":"add","path":"/spec/rules/0/http/paths/-","value":{
         "path":"/api/v1alpha1/registries","pathType":"Prefix",
-        "backend":{"service":{"name":"dockerizer-backend","port":{"number":8080}}}
+        "backend":{"service":{"name":"imagekit-backend","port":{"number":8080}}}
       }},
       {"op":"add","path":"/spec/rules/0/http/paths/-","value":{
-        "path":"/dockerizer","pathType":"Prefix",
-        "backend":{"service":{"name":"dockerizer-web","port":{"number":80}}}
+        "path":"/imagekit","pathType":"Prefix",
+        "backend":{"service":{"name":"imagekit-web","port":{"number":80}}}
       }}
     ]'
 
@@ -540,5 +540,5 @@ patch_aipub_ingress
 # Completion
 #==============================================================================
 log_step "Installation Complete"
-log_success "Dockerizer has been deployed to namespace '${NAMESPACE}'"
-log_info "Access URL: https://${AIPUB_HOST}/dockerizer"
+log_success "ImageKit has been deployed to namespace '${NAMESPACE}'"
+log_info "Access URL: https://${AIPUB_HOST}/imagekit"
