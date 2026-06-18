@@ -2,7 +2,8 @@ package io.ten1010.imagekitbackend.volume.controller;
 
 import io.ten1010.imagekitbackend.aipub.filter.AipubAuthenticationFilter;
 import io.ten1010.imagekitbackend.volume.dto.*;
-import io.ten1010.imagekitbackend.volume.service.VolumeBrowserService;
+import io.ten1010.imagekitbackend.volume.service.VolumeBrowser;
+import io.ten1010.imagekitbackend.volume.service.VolumeUploader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +38,10 @@ class VolumeControllerDocsTest {
     private AipubAuthenticationFilter aipubAuthenticationFilter;
 
     @MockitoBean
-    private VolumeBrowserService service;
+    private VolumeBrowser volumeBrowser;
+
+    @MockitoBean
+    private VolumeUploader volumeUploader;
 
     @BeforeEach
     void setUp(WebApplicationContext context, RestDocumentationContextProvider restDocs) {
@@ -66,7 +70,7 @@ class VolumeControllerDocsTest {
                                 .build()
                 ))
                 .build();
-        given(service.listVolumes("pjw")).willReturn(response);
+        given(volumeBrowser.listVolumes("pjw")).willReturn(response);
 
         mockMvc.perform(get("/api/v1alpha1/volumes/{namespace}", "pjw"))
                 .andExpect(status().isOk())
@@ -112,7 +116,7 @@ class VolumeControllerDocsTest {
                                 .build()
                 ))
                 .build();
-        given(service.browse("pjw", "data-storage", "/")).willReturn(response);
+        given(volumeBrowser.browse("pjw", "data-storage", "/")).willReturn(response);
 
         mockMvc.perform(get("/api/v1alpha1/volumes/{namespace}/{volumeName}/browse", "pjw", "data-storage")
                         .param("path", "/"))
@@ -159,7 +163,7 @@ class VolumeControllerDocsTest {
                                 .build()
                 ))
                 .build();
-        given(service.browse("pjw", "data-storage", "/models/checkpoints")).willReturn(response);
+        given(volumeBrowser.browse("pjw", "data-storage", "/models/checkpoints")).willReturn(response);
 
         mockMvc.perform(get("/api/v1alpha1/volumes/{namespace}/{volumeName}/browse", "pjw", "data-storage")
                         .param("path", "/models/checkpoints"))

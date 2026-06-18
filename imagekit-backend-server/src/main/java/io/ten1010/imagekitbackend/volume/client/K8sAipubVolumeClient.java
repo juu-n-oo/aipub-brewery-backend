@@ -10,6 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * {@link AipubVolumeClient} 의 <b>k8s API 직접 호출</b> 구현. 공식 k8s client({@link CustomObjectsApi})로
+ * {@code aipub.ten1010.io/v1alpha1/aipubvolumes} custom object 를 읽으며, 백엔드 Pod 의
+ * ServiceAccount(kubeconfig) 권한으로 동작한다. 클러스터 내부에서 k8s 에 직접 접근 가능할 때 쓴다.
+ * <p>
+ * {@code imagekit.volume.client-mode=K8S}(기본값)일 때 {@link VolumeClientConfiguration} 가 선택한다.
+ * CR {@code Map} → {@link VolumeInfo} 매핑({@link #toVolumeInfo})은 두 구현이 공유하도록 static 으로 노출한다.
+ */
 @RequiredArgsConstructor
 @Slf4j
 public class K8sAipubVolumeClient implements AipubVolumeClient {

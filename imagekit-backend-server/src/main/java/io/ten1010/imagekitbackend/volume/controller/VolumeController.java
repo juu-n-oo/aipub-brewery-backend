@@ -5,7 +5,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.ten1010.imagekitbackend.volume.dto.BrowseResponse;
 import io.ten1010.imagekitbackend.volume.dto.VolumeListResponse;
-import io.ten1010.imagekitbackend.volume.service.VolumeBrowserService;
+import io.ten1010.imagekitbackend.volume.service.VolumeBrowser;
+import io.ten1010.imagekitbackend.volume.service.VolumeUploader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -17,13 +18,14 @@ import org.springframework.web.multipart.MultipartFile;
 @Tag(name = "Volume", description = "AIPubVolume 조회 및 파일 브라우저")
 public class VolumeController {
 
-    private final VolumeBrowserService service;
+    private final VolumeBrowser volumeBrowser;
+    private final VolumeUploader volumeUploader;
 
     @GetMapping("/{namespace}")
     @Operation(summary = "Volume 목록 조회", description = "프로젝트(namespace)의 AIPubVolume 목록을 조회한다.")
     public VolumeListResponse listVolumes(
             @Parameter(description = "프로젝트 namespace") @PathVariable String namespace) {
-        return service.listVolumes(namespace);
+        return volumeBrowser.listVolumes(namespace);
     }
 
     @GetMapping("/{namespace}/{volumeName}/browse")
@@ -32,7 +34,7 @@ public class VolumeController {
             @Parameter(description = "프로젝트 namespace") @PathVariable String namespace,
             @Parameter(description = "AIPubVolume 이름") @PathVariable String volumeName,
             @Parameter(description = "조회할 경로 (기본: /)", example = "/models") @RequestParam(defaultValue = "/") String path) {
-        return service.browse(namespace, volumeName, path);
+        return volumeBrowser.browse(namespace, volumeName, path);
     }
 
     @PostMapping(value = "/{namespace}/{volumeName}/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -43,7 +45,7 @@ public class VolumeController {
             @Parameter(description = "AIPubVolume 이름") @PathVariable String volumeName,
             @Parameter(description = "업로드 대상 디렉토리 (기본: /)", example = "/models") @RequestParam(defaultValue = "/") String path,
             @Parameter(description = "업로드할 파일") @RequestPart("file") MultipartFile file) {
-        return service.upload(namespace, volumeName, path, file);
+        return volumeUploader.upload(namespace, volumeName, path, file);
     }
 
 }
