@@ -126,19 +126,6 @@ class DockerfileServiceTest {
     }
 
     @Test
-    void listByProjectReturnsResults() {
-        List<Dockerfile> entities = List.of(sampleEntity());
-        List<DockerfileResponse> responses = List.of(sampleResponse());
-        given(repository.findByProject("pjw")).willReturn(entities);
-        given(mapper.toResponseList(entities)).willReturn(responses);
-
-        List<DockerfileResponse> result = service.listByProject("pjw");
-
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().getProject()).isEqualTo("pjw");
-    }
-
-    @Test
     void updateDockerfileContent() {
         Dockerfile entity = sampleEntity();
         DockerfileUpdateRequest request = new DockerfileUpdateRequest();

@@ -8,7 +8,6 @@ import io.ten1010.imagekitbackend.dockerfile.dto.DockerfileResponse;
 import io.ten1010.imagekitbackend.dockerfile.dto.DockerfileRevisionResponse;
 import io.ten1010.imagekitbackend.dockerfile.dto.DockerfileUpdateRequest;
 import io.ten1010.imagekitbackend.aipub.config.AipubProperties;
-import io.ten1010.imagekitbackend.common.exception.ForbiddenException;
 import io.ten1010.imagekitbackend.dockerfile.service.DockerfileRevisionService;
 import io.ten1010.imagekitbackend.dockerfile.service.DockerfileService;
 import jakarta.validation.Valid;
@@ -26,7 +25,7 @@ import java.util.List;
 @Tag(name = "Dockerfile", description = "Dockerfile 관리 (CRUD) 및 리비전 이력")
 public class DockerfileController {
 
-    private final DockerfileService service;
+    private final DockerfileService dockerfileService;
     private final DockerfileRevisionService revisionService;
     private final AipubProperties aipubProperties;
 
@@ -36,43 +35,41 @@ public class DockerfileController {
     public DockerfileResponse create(@Valid @RequestBody DockerfileCreateRequest request,
                                      Authentication authentication) {
         String username = authentication.getName();
-        return service.create(request, username);
+        return dockerfileService.create(request, username);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Dockerfile 단건 조회", description = "ID로 Dockerfile을 조회한다.")
     public DockerfileResponse getById(
             @Parameter(description = "Dockerfile ID") @PathVariable Long id) {
-        return service.getById(id);
+        return dockerfileService.getById(id);
     }
 
     @GetMapping
     @Operation(summary = "Dockerfile 목록 조회",
-            description = "멤버는 바인딩된 프로젝트 안의 본인 Dockerfile 만 조회한다(projects 파라미터). "
-                    + "관리자는 all=true 로 전체를 조회하며(생성 일시 최신순) username 으로 추가 필터링할 수 있다. "
-                    + "all=true 는 백엔드가 토큰 roles 로 관리자 여부를 검증하며, 비관리자가 호출하면 403 이다.")
+            description = "관리자는 전체 Dockerfile 을 생성 일시 최신순으로 조회하며 username 으로 추가 필터링할 수 있다. "
+                    + "멤버는 바인딩된 프로젝트(projects) 안의 본인 소유 Dockerfile 만 조회한다. "
+                    + "관리자 여부는 백엔드가 토큰 roles 로 판별하므로 별도의 플래그를 신뢰하지 않는다.")
     public List<DockerfileResponse> list(
             @Parameter(description = "바인딩된 프로젝트 목록(멤버 조회). 호출자 본인 소유로 자동 제한된다.")
             @RequestParam(required = false) List<String> projects,
             @Parameter(description = "username 필터(관리자 전용)")
             @RequestParam(required = false) String username,
-            @Parameter(description = "전체 조회 여부(관리자 전용). true 면 모든 Dockerfile 을 최신순으로 조회")
-            @RequestParam(required = false, defaultValue = "false") boolean all,
             Authentication authentication) {
-        String caller = authentication.getName();
-
-        if (all) {
-            // 전체 조회 경로는 반드시 백엔드에서 관리자 여부를 검증한다(프론트 분기 신뢰 금지).
-            // 인증 필터가 selfsubjectreviews 의 roles 를 SecurityContext 권한으로 넣어두므로 그 권한과 대조한다.
-            if (!isAdmin(authentication)) {
-                throw new ForbiddenException("Admin privilege required to list all dockerfiles");
+        // 관리자 여부는 토큰 roles(=SecurityContext 권한)로 백엔드가 판별한다(프론트 분기 신뢰 금지).
+        // 인증 필터가 selfsubjectreviews 의 roles 를 SecurityContext 권한으로 넣어두므로 그 권한과 대조한다.
+        if (isAdmin(authentication)) {
+            // 관리자: 전체 조회가 기본이며, username 파라미터가 있으면 해당 사용자 소유만 필터링한다.
+            if (username != null && !username.isBlank()) {
+                return dockerfileService.listAll(username);
             }
-            return service.listAll(username);
+            return dockerfileService.listAll();
         }
 
-        // 멤버 경로: 프로젝트 IN + 토큰의 호출자 본인 이름 으로 묶어 조회한다.
+        // 멤버: 바인딩된 프로젝트 IN + 토큰의 호출자 본인 이름으로 묶어 본인 Dockerfile 만 조회한다.
         // 임의의 projects 를 넘기더라도 username gate 때문에 본인 Dockerfile 만 반환되므로 안전하다.
-        return service.listForUser(projects, caller);
+        String caller = authentication.getName();
+        return dockerfileService.listForUser(projects, caller);
     }
 
     /** 토큰 roles(=SecurityContext 권한)에 설정된 관리자 role 이 하나라도 포함되면 관리자로 본다. */
@@ -93,7 +90,7 @@ public class DockerfileController {
             @Valid @RequestBody DockerfileUpdateRequest request,
             Authentication authentication) {
         String username = authentication.getName();
-        return service.update(id, request, username);
+        return dockerfileService.update(id, request, username);
     }
 
     @DeleteMapping("/{id}")
@@ -101,7 +98,7 @@ public class DockerfileController {
     @Operation(summary = "Dockerfile 삭제", description = "ID로 Dockerfile을 삭제한다. 모든 리비전도 함께 삭제된다.")
     public void delete(
             @Parameter(description = "Dockerfile ID") @PathVariable Long id) {
-        service.delete(id);
+        dockerfileService.delete(id);
     }
 
     /* ── Revision endpoints ── */

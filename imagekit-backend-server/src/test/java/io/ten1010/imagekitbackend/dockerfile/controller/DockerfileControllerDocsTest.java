@@ -172,8 +172,7 @@ class DockerfileControllerDocsTest {
                         preprocessResponse(prettyPrint()),
                         queryParameters(
                                 parameterWithName("projects").description("바인딩된 프로젝트 목록(멤버 조회). 호출자 본인 소유로 자동 제한된다.").optional(),
-                                parameterWithName("username").description("username 필터(관리자 전용)").optional(),
-                                parameterWithName("all").description("전체 조회 여부(관리자 전용). true 면 모든 Dockerfile 을 최신순으로 조회").optional()
+                                parameterWithName("username").description("username 필터(관리자 전용)").optional()
                         ),
                         responseFields(
                                 fieldWithPath("[].id").description("Dockerfile ID"),

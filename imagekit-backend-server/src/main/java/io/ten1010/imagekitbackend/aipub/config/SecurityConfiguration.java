@@ -31,7 +31,6 @@ public class SecurityConfiguration {
                         ).permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/mcp/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(aipubAuthenticationFilter,

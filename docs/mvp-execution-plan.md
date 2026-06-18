@@ -108,7 +108,6 @@ imagekit-backend/                      # Gradle 멀티모듈 루트
 | `/api-docs` | OpenAPI 3.1 JSON (springdoc 3.0.3) |
 | `/swagger-ui` | Swagger UI |
 | `/static/docs/index.html` | Spring REST Docs HTML |
-| `/mcp/messages` | MCP SSE 엔드포인트 (AI 에이전트용) |
 
 ---
 
@@ -142,7 +141,7 @@ imagekit-backend/                      # Gradle 멀티모듈 루트
 
 ### Phase 3-C: API 문서화 ✅ 완료
 
-- [x] OpenAPI (springdoc 3.0.3), Swagger UI, REST Docs, MCP Server
+- [x] OpenAPI (springdoc 3.0.3), Swagger UI, REST Docs
 
 ### Phase 3-D: 프론트엔드 연동 API 확장 ✅ 완료
 

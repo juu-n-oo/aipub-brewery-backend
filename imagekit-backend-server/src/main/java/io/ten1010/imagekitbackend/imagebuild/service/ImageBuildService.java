@@ -5,11 +5,8 @@ import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1PodList;
-import io.kubernetes.client.openapi.apis.CustomObjectsApi;
 import io.ten1010.imagekitbackend.common.exception.K8sExceptions;
 import io.ten1010.imagekitbackend.common.exception.ResourceNotFoundException;
-import io.ten1010.imagekitbackend.imagebuild.cr.ImageBuildConstants;
-import io.ten1010.imagekitbackend.imagebuild.dto.ImageBuildResponse;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,8 +17,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
@@ -38,7 +33,6 @@ public class ImageBuildService {
     // 동시 SSE 로그 스트림 상한. 무제한 cached pool 대신 bounded pool 로 스레드 고갈을 막는다(SRV-8).
     private static final int MAX_CONCURRENT_LOG_STREAMS = 32;
 
-    private final CustomObjectsApi customObjectsApi;
     private final CoreV1Api coreV1Api;
     private final ApiClient apiClient;
     // OpenSearch fallback 은 imagekit.opensearch.enabled=true 일 때만 Bean 이 존재.
@@ -57,31 +51,6 @@ public class ImageBuildService {
     @PreDestroy
     void shutdownLogStreamExecutor() {
         logStreamExecutor.shutdownNow();
-    }
-
-    @SuppressWarnings("unchecked")
-    public List<ImageBuildResponse> listBuilds(String namespace) {
-        try {
-            Object result = customObjectsApi.listNamespacedCustomObject(
-                    ImageBuildConstants.GROUP,
-                    ImageBuildConstants.VERSION,
-                    namespace,
-                    ImageBuildConstants.PLURAL).execute();
-
-            Map<String, Object> resultMap = (Map<String, Object>) result;
-            List<Map<String, Object>> items = (List<Map<String, Object>>) resultMap.get("items");
-
-            return items.stream()
-                    .map(ImageBuildCrMapper::toResponse)
-                    .toList();
-        } catch (ApiException e) {
-            throw K8sExceptions.translateNon404(e, "ImageBuilds in namespace " + namespace);
-        }
-    }
-
-    public ImageBuildResponse getBuildStatus(String namespace, String name) {
-        Map<String, Object> crMap = getCrMap(namespace, name);
-        return ImageBuildCrMapper.toResponse(crMap);
     }
 
     public String getBuildLogs(String namespace, String name) {
@@ -150,20 +119,6 @@ public class ImageBuildService {
         emitter.onCompletion(() -> log.debug("SSE log stream completed: {}/{}", namespace, podName));
 
         return emitter;
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> getCrMap(String namespace, String name) {
-        try {
-            return (Map<String, Object>) customObjectsApi.getNamespacedCustomObject(
-                    ImageBuildConstants.GROUP,
-                    ImageBuildConstants.VERSION,
-                    namespace,
-                    ImageBuildConstants.PLURAL,
-                    name).execute();
-        } catch (ApiException e) {
-            throw K8sExceptions.translate(e, "ImageBuild " + namespace + "/" + name);
-        }
     }
 
     /**

@@ -1,13 +1,6 @@
 spring:
   application:
     name: imagekit-backend
-  ai:
-    mcp:
-      server:
-        name: imagekit
-        version: 1.0.0
-        type: SYNC
-        sse-message-endpoint: /mcp/messages
   datasource:
     url: jdbc:h2:mem:imagekit
     driver-class-name: org.h2.Driver
@@ -43,7 +36,7 @@ springdoc:
 imagekit:
   aipub:
     base-url: http://localhost:9090
-    # Dockerfile 전체 조회(all=true)를 허용할 관리자 role (selfsubjectreviews roles 와 대조)
+    # Dockerfile 전체 조회를 허용할 관리자 role (selfsubjectreviews roles 와 대조)
     admin-roles:
       - aipub-admin
   kubernetes:

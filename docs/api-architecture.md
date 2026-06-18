@@ -48,7 +48,7 @@ io.ten1010.imagekitbackend/
 ### SecurityFilterChain
 
 ```java
-permitAll:  api-docs, swagger-ui, h2-console, actuator, mcp
+permitAll:  api-docs, swagger-ui, h2-console, actuator
 authenticated: 나머지 모든 요청
 ```
 

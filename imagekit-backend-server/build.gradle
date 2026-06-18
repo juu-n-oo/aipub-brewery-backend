@@ -37,11 +37,6 @@ dependencies {
     // Springdoc OpenAPI (Swagger UI)
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocOpenapiVersion"
 
-    // Spring AI MCP Server
-    implementation("org.springframework.ai:spring-ai-starter-mcp-server-webmvc:$springAiMcpVersion") {
-        exclude group: 'io.swagger.core.v3', module: 'swagger-annotations'
-    }
-
     // swagger-annotations 버전 통일 (springdoc 호환)
     implementation "io.swagger.core.v3:swagger-annotations-jakarta:$swaggerAnnotationsVersion"
 
